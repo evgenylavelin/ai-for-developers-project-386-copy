@@ -7,6 +7,7 @@ import { GuestBookingPage } from "./components/GuestBookingPage";
 import { bookingSchedule, multiEventTypes, singleEventType } from "./data/mockGuestFlow";
 import { buildPublicCalendarDays } from "./lib/publicCalendar";
 import { buildAvailableDatesFromSchedule } from "./lib/publicBookings";
+import type { OwnerEventType } from "./types";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -37,7 +38,7 @@ function createApiBookingDay() {
 
 function createOwnerEventTypesFetchMock() {
   const bookingDay = createApiBookingDay();
-  let ownerEventTypes = [
+  let ownerEventTypes: OwnerEventType[] = [
     {
       id: "strategy",
       title: "Стратегическая сессия",

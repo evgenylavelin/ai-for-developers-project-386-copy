@@ -4,14 +4,6 @@ import { GuestBookingPage } from "./components/GuestBookingPage";
 import { OwnerEventTypesPage } from "./components/OwnerEventTypesPage";
 import { OwnerSettingsPage } from "./components/OwnerSettingsPage";
 import { PublicBookingsHome } from "./components/PublicBookingsHome";
-import {
-  bookingSchedule,
-  multiEventTypes,
-  noEventTypes,
-  publicBookings,
-  singleEventType,
-} from "./data/mockGuestFlow";
-import { mockOwnerEventTypes } from "./data/mockOwnerEventTypes";
 import { cancelBooking, createBooking, getAvailability, listBookings } from "./lib/bookingsApi";
 import {
   archiveOwnerEventType,
@@ -30,11 +22,18 @@ import {
   buildAvailableDatesFromAvailability,
   buildPublicCalendarDays,
 } from "./lib/publicCalendar";
+import {
+  buildCreateBookingRequest,
+  buildScenarioAvailability,
+  createScenarioBooking,
+  getScenarioData,
+  getScenarioOwnerEventTypes,
+  type AppScenario,
+} from "./lib/appScenarios";
 import type {
   AvailabilityByEventType,
   Booking,
   BookingDraft,
-  CreateBookingRequest,
   EventType,
   OwnerEventType,
   OwnerEventTypeInput,
@@ -43,93 +42,8 @@ import type {
 } from "./types";
 
 type AppProps = {
-  scenario?: "none" | "single" | "multi" | "public";
+  scenario?: AppScenario;
 };
-
-type ScenarioData = {
-  bookings: Booking[];
-  eventTypes: EventType[];
-  schedule: typeof bookingSchedule;
-};
-
-function getScenarioData(scenario: NonNullable<AppProps["scenario"]>): ScenarioData {
-  if (scenario === "none") {
-    return {
-      bookings: [],
-      eventTypes: noEventTypes,
-      schedule: bookingSchedule,
-    };
-  }
-
-  if (scenario === "single") {
-    return {
-      bookings: [],
-      eventTypes: singleEventType,
-      schedule: bookingSchedule,
-    };
-  }
-
-  if (scenario === "multi") {
-    return {
-      bookings: [],
-      eventTypes: multiEventTypes,
-      schedule: bookingSchedule,
-    };
-  }
-
-  return {
-    bookings: publicBookings,
-    eventTypes: multiEventTypes,
-    schedule: bookingSchedule,
-  };
-}
-
-function buildScenarioAvailability(schedule: ScheduleDay[], eventTypes: EventType[]): AvailabilityByEventType {
-  return Object.fromEntries(
-    eventTypes.map((eventType) => [
-      eventType.id,
-      schedule.flatMap((day) =>
-        (day.slotsByEventType[eventType.id] ?? []).map((time) => ({
-          startAt: `${day.isoDate}T${time}:00Z`,
-          endAt: `${day.isoDate}T${time}:00Z`,
-        })),
-      ),
-    ]),
-  );
-}
-
-function buildCreateBookingRequest(draft: BookingDraft, eventTypes: EventType[]): CreateBookingRequest {
-  const eventType = eventTypes.find((item) => item.id === draft.eventTypeId);
-
-  if (!eventType) {
-    throw new Error(`Unknown event type: ${draft.eventTypeId}`);
-  }
-
-  const [hours, minutes] = draft.time.split(":").map(Number);
-  const totalMinutes = hours * 60 + minutes + eventType.durationMinutes;
-  const endHours = Math.floor(totalMinutes / 60)
-    .toString()
-    .padStart(2, "0");
-  const endMinutes = (totalMinutes % 60).toString().padStart(2, "0");
-
-  return {
-    eventTypeId: draft.eventTypeId,
-    startAt: `${draft.isoDate}T${draft.time}:00Z`,
-    endAt: `${draft.isoDate}T${endHours}:${endMinutes}:00Z`,
-    guestName: draft.guestName.trim(),
-    guestEmail: draft.guestEmail.trim(),
-  };
-}
-
-function createScenarioBooking(eventTypes: EventType[], draft: BookingDraft): Booking {
-  const request = buildCreateBookingRequest(draft, eventTypes);
-
-  return {
-    id: `booking-${draft.eventTypeId}-${draft.isoDate}-${draft.time}`,
-    ...request,
-    status: "active",
-  };
-}
 
 function toOwnerEventType(eventType: EventType): OwnerEventType {
   return {
@@ -173,7 +87,7 @@ export default function App({ scenario }: AppProps) {
   const [workspace, setWorkspace] = useState<Workspace>("public");
   const [guestEventTypes, setGuestEventTypes] = useState<EventType[]>(scenarioData?.eventTypes ?? []);
   const [ownerEventTypes, setOwnerEventTypes] = useState<OwnerEventType[]>(
-    scenarioData ? mockOwnerEventTypes : [],
+    scenarioData ? getScenarioOwnerEventTypes() : [],
   );
   const [bookings, setBookings] = useState<Booking[]>(scenarioData?.bookings ?? []);
   const [availabilityByEventType, setAvailabilityByEventType] = useState<AvailabilityByEventType>(
@@ -203,7 +117,7 @@ export default function App({ scenario }: AppProps) {
 
     setWorkspace("public");
     setGuestEventTypes(nextScenarioData.eventTypes);
-    setOwnerEventTypes(mockOwnerEventTypes);
+    setOwnerEventTypes(getScenarioOwnerEventTypes());
     setBookings(nextScenarioData.bookings);
     setAvailabilityByEventType(
       buildScenarioAvailability(nextScenarioData.schedule, nextScenarioData.eventTypes),
@@ -298,7 +212,7 @@ export default function App({ scenario }: AppProps) {
     };
   }, [isScenarioMode, reloadToken]);
 
-  const schedule = scenarioData?.schedule ?? [];
+  const schedule: ScheduleDay[] = scenarioData?.schedule ?? [];
   const calendarDays = isScenarioMode
     ? schedule.map(({ slotsByEventType: _slotsByEventType, ...day }) => day)
     : buildPublicCalendarDays();

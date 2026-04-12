@@ -20,11 +20,13 @@ function isEventType(value: unknown): value is EventType {
 }
 
 function isOwnerEventType(value: unknown): value is OwnerEventType {
-  if (!isEventType(value)) {
+  if (!isRecord(value) || !isEventType(value)) {
     return false;
   }
 
-  return typeof value.isArchived === "boolean" && typeof value.hasBookings === "boolean";
+  const record = value as Record<string, unknown>;
+
+  return typeof record.isArchived === "boolean" && typeof record.hasBookings === "boolean";
 }
 
 async function fetchEventTypes<T extends EventType | OwnerEventType>(
