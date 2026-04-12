@@ -124,7 +124,7 @@ export function PublicBookingsHome({
               disabled={isRetryingStartup}
               onClick={onRetryStartup}
             >
-              {isRetryingStartup ? "Повторяем..." : "Повторить"}
+              {isRetryingStartup ? "Повторяем загрузку..." : "Повторить загрузку"}
             </button>
           ) : null}
         </section>

@@ -546,7 +546,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Записаться" })).toBeEnabled();
 
     shouldFailBookings = false;
-    await user.click(screen.getByRole("button", { name: "Повторить" }));
+    await user.click(screen.getByRole("button", { name: "Повторить загрузку" }));
 
     expect(
       await within(screen.getByRole("button", { name: bookingDay.fullLabel })).findByText("1 занято"),
@@ -621,7 +621,7 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     shouldFailEventTypes = false;
-    await user.click(screen.getByRole("button", { name: "Повторить" }));
+    await user.click(screen.getByRole("button", { name: "Повторить загрузку" }));
 
     expect(await screen.findByRole("button", { name: /Стратегическая сессия, 30 мин/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Записаться" })).toBeEnabled();
@@ -698,7 +698,7 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     shouldFailStartup = false;
-    await user.click(screen.getByRole("button", { name: "Повторить" }));
+    await user.click(screen.getByRole("button", { name: "Повторить загрузку" }));
 
     expect(
       await within(screen.getByRole("button", { name: bookingDay.fullLabel })).findByText("1 занято"),

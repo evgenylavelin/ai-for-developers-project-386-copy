@@ -857,35 +857,11 @@ h1 {
   background: #eee4dc;
 }
 
-.owner-support-placeholders {
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-  border: 1px dashed rgba(24, 33, 23, 0.16);
-  border-radius: 18px;
-  background: rgba(248, 245, 240, 0.72);
-}
-
-.owner-support-placeholders__label {
-  margin: 0;
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(24, 33, 23, 0.56);
-}
-
-.owner-placeholder-alert,
 .owner-rule-banner,
 .owner-archive-banner,
 .owner-empty-state {
   padding: 14px 16px;
   border-radius: 18px;
-}
-
-.owner-placeholder-alert {
-  border: 1px solid rgba(24, 33, 23, 0.08);
-  background: rgba(255, 255, 255, 0.82);
-  color: rgba(24, 33, 23, 0.68);
 }
 
 .owner-rule-banner {

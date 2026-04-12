@@ -394,12 +394,6 @@ export function OwnerEventTypesPage({
               ) : null}
             </div>
 
-            <div className="owner-support-placeholders" aria-label="Будущие статусы синхронизации">
-              <p className="owner-support-placeholders__label">Будущая поддержка синхронизации</p>
-              <div className="owner-placeholder-alert">Тип был изменен в другой сессии</div>
-              <div className="owner-placeholder-alert">Данные устарели, обновите форму</div>
-            </div>
-
             {selectedEventType?.hasBookings ? (
               <p className="owner-rule-banner">
                 Тип уже использовался в бронированиях. Его можно только архивировать.
