@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "^/(schedule|event-types|bookings)(/.*)?$": {
+      "^/(schedule|event-types|bookings|owner/event-types)(/.*)?$": {
         target: "http://localhost:3001",
         changeOrigin: true,
       },

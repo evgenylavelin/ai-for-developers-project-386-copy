@@ -47,7 +47,7 @@ async function fetchEventTypes<T extends EventType | OwnerEventType>(
     throw new Error(backendMessage ?? fallbackMessage);
   }
 
-  const payload = await response.json();
+  const payload = await readJsonPayload(response, fallbackMessage);
 
   if (!Array.isArray(payload) || !payload.every(validator)) {
     throw new Error(fallbackMessage);
@@ -75,13 +75,21 @@ async function fetchJson<T>(
     throw new Error(backendMessage ?? fallbackMessage);
   }
 
-  const payload = await response.json();
+  const payload = await readJsonPayload(response, fallbackMessage);
 
   if (!validator(payload)) {
     throw new Error(fallbackMessage);
   }
 
   return payload;
+}
+
+async function readJsonPayload(response: Response, fallbackMessage: string): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(fallbackMessage);
+  }
 }
 
 function createJsonRequest(method: "POST" | "PATCH", body: unknown): RequestInit {

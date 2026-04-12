@@ -13,6 +13,7 @@ import {
   getOwnerEventTypes,
   updateOwnerEventType,
 } from "./lib/eventTypesApi";
+import { warmScheduleCache } from "./lib/scheduleApi";
 import {
   buildAvailableDatesFromSchedule,
   cancelPublicBooking,
@@ -175,6 +176,8 @@ export default function App({ scenario }: AppProps) {
     }
 
     let alive = true;
+
+    warmScheduleCache();
 
     async function loadRemoteState() {
       setLoading(true);

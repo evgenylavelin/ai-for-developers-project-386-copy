@@ -280,8 +280,8 @@ export function OwnerEventTypesPage({
     <>
       <section className="workspace-page owner-workspace">
         <WorkspaceHero
-          eyebrow="Owner Workspace"
-          title="Управление типами событий"
+          eyebrow="Call Planner"
+          title="Типы событий"
           description="Настраивайте карточки встреч через backend-источник данных. Изменения сразу синхронизируются с owner workspace и публичным списком доступных типов."
           workspace={workspace}
           onChangeWorkspace={onChangeWorkspace}
@@ -302,11 +302,10 @@ export function OwnerEventTypesPage({
         />
 
         <div className="owner-layout">
-          <section className="owner-card owner-list-panel" aria-labelledby="owner-event-types-title">
+          <section className="owner-card owner-list-panel" aria-label="Типы событий">
             <div className="owner-list-panel__header">
               <div>
-                <p className="bookings-card__eyebrow">Список</p>
-                <h2 id="owner-event-types-title">Типы событий</h2>
+                <p className="bookings-card__eyebrow">Типы событий</p>
               </div>
               <button type="button" className="secondary-button" onClick={openCreateMode} disabled={submitting}>
                 + Создать тип события
@@ -376,13 +375,10 @@ export function OwnerEventTypesPage({
             )}
           </section>
 
-          <section className="owner-card owner-form-panel" aria-labelledby="owner-form-title">
+          <section className="owner-card owner-form-panel" aria-label="Новый тип события">
             <div className="owner-form-panel__header">
               <div>
-                <p className="bookings-card__eyebrow">Форма</p>
-                <h2 id="owner-form-title">
-                  {mode === "create" ? "Новый тип события" : "Редактирование типа события"}
-                </h2>
+                <p className="bookings-card__eyebrow">Новый тип события</p>
               </div>
               {selectedEventType ? (
                 <div className="owner-status-row owner-status-row--compact">

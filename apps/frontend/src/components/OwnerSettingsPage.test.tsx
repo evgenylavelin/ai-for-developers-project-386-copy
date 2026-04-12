@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resetScheduleCache } from "../lib/scheduleApi";
 import { OwnerSettingsPage } from "./OwnerSettingsPage";
 
 const loadedSchedule = {
@@ -21,10 +22,12 @@ function mockScheduleGetResponse(schedule = loadedSchedule) {
 }
 
 beforeEach(() => {
+  resetScheduleCache();
   mockScheduleGetResponse();
 });
 
 afterEach(() => {
+  resetScheduleCache();
   vi.unstubAllGlobals();
 });
 

@@ -72,6 +72,20 @@ describe("eventTypesApi", () => {
     expect(fetchMock).toHaveBeenCalledWith("https://api.example.com/owner/event-types");
   });
 
+  it("falls back to a friendly error when the owner event types endpoint returns HTML", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new SyntaxError("Unexpected token '<'");
+        },
+      }),
+    );
+
+    await expect(getOwnerEventTypes()).rejects.toThrow("Не удалось загрузить типы событий владельца.");
+  });
+
   it("surfaces backend error messages for owner event type loading", async () => {
     vi.stubGlobal(
       "fetch",

@@ -128,8 +128,8 @@ export function OwnerSettingsPage({
   return (
     <section className="workspace-page owner-workspace">
       <WorkspaceHero
-        eyebrow="Owner Workspace"
-        title="Рабочее расписание"
+        eyebrow="Call Planner"
+        title="Настройки"
         description="Настройте рабочие дни и единое время приема, чтобы публичные слоты строились по одному графику."
         workspace={workspace}
         onChangeWorkspace={onChangeWorkspace}
@@ -150,11 +150,10 @@ export function OwnerSettingsPage({
       />
 
       <div className="owner-settings-layout">
-        <section className="owner-card owner-settings-panel" aria-labelledby="owner-schedule-title">
+        <section className="owner-card owner-settings-panel" aria-label="Рабочие дни и время">
           <div className="owner-list-panel__header">
             <div>
-              <p className="bookings-card__eyebrow">Настройки</p>
-              <h2 id="owner-schedule-title">Рабочие дни и время</h2>
+              <p className="bookings-card__eyebrow">Рабочие дни и время</p>
             </div>
           </div>
 

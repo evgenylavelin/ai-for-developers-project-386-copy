@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { OwnerSchedule } from "../types";
 
-import { getSchedule, updateSchedule } from "./scheduleApi";
+import { getSchedule, resetScheduleCache, updateSchedule } from "./scheduleApi";
 
 const validSchedule: OwnerSchedule = {
   workingDays: ["monday", "wednesday"],
@@ -12,6 +12,7 @@ const validSchedule: OwnerSchedule = {
 
 describe("scheduleApi", () => {
   afterEach(() => {
+    resetScheduleCache();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
@@ -61,5 +62,19 @@ describe("scheduleApi", () => {
     );
 
     await expect(getSchedule()).rejects.toThrow("Не удалось загрузить расписание.");
+  });
+
+  it("reuses the cached schedule between repeated reads", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => validSchedule,
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getSchedule()).resolves.toEqual(validSchedule);
+    await expect(getSchedule()).resolves.toEqual(validSchedule);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

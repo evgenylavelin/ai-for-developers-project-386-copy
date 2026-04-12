@@ -1,6 +1,8 @@
 import type { OwnerSchedule } from "../types";
 
 const schedulePath = "/schedule";
+let cachedSchedule: OwnerSchedule | null = null;
+let inFlightScheduleRequest: Promise<OwnerSchedule> | null = null;
 const dayOfWeekValues = new Set([
   "monday",
   "tuesday",
@@ -85,7 +87,7 @@ function isOwnerSchedule(value: unknown): value is OwnerSchedule {
   );
 }
 
-export async function getSchedule(): Promise<OwnerSchedule> {
+async function fetchSchedule(): Promise<OwnerSchedule> {
   let response: Response;
 
   try {
@@ -104,7 +106,23 @@ export async function getSchedule(): Promise<OwnerSchedule> {
     throw new Error("Не удалось загрузить расписание.");
   }
 
+  cachedSchedule = payload;
+
   return payload;
+}
+
+export async function getSchedule(): Promise<OwnerSchedule> {
+  if (cachedSchedule) {
+    return cachedSchedule;
+  }
+
+  if (!inFlightScheduleRequest) {
+    inFlightScheduleRequest = fetchSchedule().finally(() => {
+      inFlightScheduleRequest = null;
+    });
+  }
+
+  return inFlightScheduleRequest;
 }
 
 export async function updateSchedule(schedule: OwnerSchedule): Promise<OwnerSchedule> {
@@ -133,5 +151,16 @@ export async function updateSchedule(schedule: OwnerSchedule): Promise<OwnerSche
     throw new Error("Не удалось сохранить расписание.");
   }
 
+  cachedSchedule = payload;
+
   return payload;
+}
+
+export function warmScheduleCache(): void {
+  void getSchedule().catch(() => undefined);
+}
+
+export function resetScheduleCache(): void {
+  cachedSchedule = null;
+  inFlightScheduleRequest = null;
 }

@@ -216,7 +216,7 @@ export function PublicBookingsHome({
                       <strong>
                         {bookingsState === "loading"
                           ? "Бронирования загружаются"
-                          : "Статус бронирований недоступен"}
+                            : "—"}
                       </strong>
                     )}
                     {selectedFilterId === ALL_EVENT_TYPES_FILTER ? null : isAvailabilityKnown ? (
