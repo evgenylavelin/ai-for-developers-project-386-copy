@@ -37,11 +37,15 @@ export function formatSummary(summary: GuestFlowSummary): string {
 }
 
 export function buildSummaryParts(summary: GuestFlowSummary): string[] {
-  return [summary.eventTypeTitle, summary.fullDateLabel, summary.timeLabel].filter(Boolean);
+  return [summary.eventTypeTitle, summary.fullDateLabel, summary.timeLabel].filter(
+    (value): value is string => Boolean(value),
+  );
 }
 
 export function buildStepSummaryParts(summary: GuestFlowSummary): string[] {
   const dateTimePart = [summary.fullDateLabel, summary.timeLabel].filter(Boolean).join(" • ");
 
-  return [summary.eventTypeTitle, dateTimePart].filter(Boolean);
+  return [summary.eventTypeTitle, dateTimePart].filter(
+    (value): value is string => Boolean(value),
+  );
 }

@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import App from "./App";
 import { GuestBookingPage } from "./components/GuestBookingPage";
-import { multiEventTypes, singleEventType, slotDates } from "./data/mockGuestFlow";
+import { bookingSchedule, multiEventTypes, singleEventType } from "./data/mockGuestFlow";
+import { buildAvailableDatesByEventType } from "./lib/publicBookings";
 
 describe("App", () => {
   it("renders the unavailable state when there are no event types", () => {
@@ -13,6 +14,14 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { name: "Запись пока недоступна" }),
     ).toBeInTheDocument();
+  });
+
+  it("opens the public bookings home when bookings already exist", () => {
+    render(<App scenario="public" />);
+
+    expect(screen.getByRole("heading", { name: "Бронирования" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Записаться" })).toBeInTheDocument();
+    expect(screen.getByText("Иван Петров")).toBeInTheDocument();
   });
 
   it("requires event type selection before continuing", async () => {
@@ -29,6 +38,14 @@ describe("App", () => {
     expect(nextButton).toBeEnabled();
   });
 
+  it("keeps the direct booking flow as the initial screen when there are no bookings", () => {
+    render(<App scenario="single" />);
+
+    expect(
+      screen.getByRole("heading", { name: "Выберите дату и время" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows the selected event type above the date and time step", async () => {
     const user = userEvent.setup();
 
@@ -43,13 +60,26 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows compact weekdays in the calendar and a full date above slots", () => {
-    render(<App scenario="single" />);
+  it("shows only booked counts in the public calendar when the all filter is active", () => {
+    render(<App scenario="public" />);
 
-    expect(screen.getByText("Ср")).toBeInTheDocument();
-    expect(screen.getByText("4 сл.")).toBeInTheDocument();
-    expect(screen.getByText("15")).toBeInTheDocument();
-    expect(screen.getByText("Среда, 15 апреля")).toBeInTheDocument();
+    const selectedDay = screen.getByRole("button", { name: "Среда, 15 апреля" });
+
+    expect(within(selectedDay).getByText("2 занято")).toBeInTheDocument();
+    expect(screen.queryByText(/свободно/)).not.toBeInTheDocument();
+  });
+
+  it("shows booked and free counts after selecting a specific event type filter", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="public" />);
+
+    await user.click(screen.getByRole("button", { name: "30 минут" }));
+
+    const selectedDay = screen.getByRole("button", { name: "Среда, 15 апреля" });
+
+    expect(within(selectedDay).getByText("1 занято")).toBeInTheDocument();
+    expect(within(selectedDay).getByText("2 свободно")).toBeInTheDocument();
   });
 
   it("moves the direct-booking flow to the contacts step after selecting a slot", async () => {
@@ -72,6 +102,15 @@ describe("App", () => {
     expect(progressItems[1]).toHaveClass("progress-step--active");
   });
 
+  it("shows compact weekdays in the booking flow and a full date above slots", () => {
+    render(<App scenario="single" />);
+
+    expect(screen.getByText("Ср")).toBeInTheDocument();
+    expect(screen.getByText("3 сл.")).toBeInTheDocument();
+    expect(screen.getByText("15")).toBeInTheDocument();
+    expect(screen.getByText("Среда, 15 апреля")).toBeInTheDocument();
+  });
+
   it("shows only the previous-step selection in the summary on the date and time step", async () => {
     const user = userEvent.setup();
 
@@ -87,10 +126,37 @@ describe("App", () => {
 
     render(<App scenario="single" />);
 
-    await user.click(screen.getByRole("button", { name: "Чт 16" }));
+    await user.click(screen.getByRole("button", { name: "Вс 19" }));
 
     expect(
       screen.getByText("На выбранный день свободных слотов нет. Выберите другую дату."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows an explicit empty state for a selected public day without bookings", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="public" />);
+
+    await user.click(screen.getByRole("button", { name: "Суббота, 18 апреля" }));
+
+    expect(screen.getByText("На выбранную дату публичных бронирований пока нет.")).toBeInTheDocument();
+  });
+
+  it("keeps cancelled public bookings visible after cancellation", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="public" />);
+
+    const bookingCard = screen.getByText("Иван Петров").closest("article");
+
+    expect(bookingCard).not.toBeNull();
+
+    await user.click(within(bookingCard as HTMLElement).getByRole("button", { name: "Отменить" }));
+
+    expect(within(bookingCard as HTMLElement).getByText("Отменено")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("button", { name: "Среда, 15 апреля" })).getByText("1 занято"),
     ).toBeInTheDocument();
   });
 
@@ -100,10 +166,7 @@ describe("App", () => {
     render(<App scenario="single" />);
 
     await user.click(screen.getByRole("button", { name: "09:00" }));
-
-    expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Чт 16" }));
+    await user.click(screen.getByRole("button", { name: "Вс 19" }));
 
     expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
     expect(
@@ -114,41 +177,43 @@ describe("App", () => {
   it("reconciles selected date and time when GuestBookingPage receives new dates", async () => {
     const user = userEvent.setup();
 
-    const initialDates = [
-      {
-        isoDate: "2026-04-15",
-        weekdayShort: "Ср",
-        dayNumber: "15",
-        fullLabel: "Среда, 15 апреля",
-        slots: ["09:00", "10:30"],
-      },
-      {
-        isoDate: "2026-04-16",
-        weekdayShort: "Чт",
-        dayNumber: "16",
-        fullLabel: "Четверг, 16 апреля",
-        slots: [],
-      },
-    ];
-    const nextDates = [
-      {
-        isoDate: "2026-04-18",
-        weekdayShort: "Сб",
-        dayNumber: "18",
-        fullLabel: "Суббота, 18 апреля",
-        slots: ["14:00"],
-      },
-    ];
+    const initialDates = {
+      standard: [
+        {
+          isoDate: "2026-04-15",
+          weekdayShort: "Ср",
+          dayNumber: "15",
+          fullLabel: "Среда, 15 апреля",
+          slots: ["09:00", "10:30"],
+        },
+        {
+          isoDate: "2026-04-16",
+          weekdayShort: "Чт",
+          dayNumber: "16",
+          fullLabel: "Четверг, 16 апреля",
+          slots: [],
+        },
+      ],
+    };
+    const nextDates = {
+      standard: [
+        {
+          isoDate: "2026-04-18",
+          weekdayShort: "Сб",
+          dayNumber: "18",
+          fullLabel: "Суббота, 18 апреля",
+          slots: ["14:00"],
+        },
+      ],
+    };
 
     const { rerender } = render(
-      <GuestBookingPage eventTypes={singleEventType} dates={initialDates} />,
+      <GuestBookingPage eventTypes={singleEventType} datesByEventType={initialDates} />,
     );
 
     await user.click(screen.getByRole("button", { name: "09:00" }));
 
-    expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
-
-    rerender(<GuestBookingPage eventTypes={singleEventType} dates={nextDates} />);
+    rerender(<GuestBookingPage eventTypes={singleEventType} datesByEventType={nextDates} />);
 
     expect(screen.getByText("Суббота, 18 апреля")).toBeInTheDocument();
     expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
@@ -157,8 +222,9 @@ describe("App", () => {
 
   it("clears date and time selection after changing the event type", async () => {
     const user = userEvent.setup();
+    const datesByEventType = buildAvailableDatesByEventType(bookingSchedule, multiEventTypes, []);
 
-    render(<GuestBookingPage eventTypes={multiEventTypes} dates={slotDates} />);
+    render(<GuestBookingPage eventTypes={multiEventTypes} datesByEventType={datesByEventType} />);
 
     await user.click(screen.getByRole("button", { name: "30 минут" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -180,7 +246,7 @@ describe("App", () => {
   });
 
   it("shows explicit empty step state when GuestBookingPage receives no dates", () => {
-    render(<GuestBookingPage eventTypes={singleEventType} dates={[]} />);
+    render(<GuestBookingPage eventTypes={singleEventType} datesByEventType={{ standard: [] }} />);
 
     expect(
       screen.getByText("Свободные даты пока недоступны. Попробуйте позже."),
@@ -202,6 +268,19 @@ describe("App", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Подтвердить" })).toBeInTheDocument();
+  });
+
+  it("opens the booking flow from the public home with the selected date preserved", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="public" />);
+
+    await user.click(screen.getByRole("button", { name: "Пятница, 17 апреля" }));
+    await user.click(screen.getByRole("button", { name: "Записаться" }));
+    await user.click(screen.getByRole("button", { name: "30 минут" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+
+    expect(screen.getByText("Пятница, 17 апреля")).toBeInTheDocument();
   });
 
   it("shows an inline error when contact data is incomplete", async () => {
@@ -234,6 +313,27 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Детали встречи сохранены.")).toBeInTheDocument();
     expect(screen.getByText("30 минут • Среда, 15 апреля • 10:30")).toBeInTheDocument();
+  });
+
+  it("returns from the success screen back to public bookings and shows the new booking", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="public" />);
+
+    await user.click(screen.getByRole("button", { name: "Пятница, 17 апреля" }));
+    await user.click(screen.getByRole("button", { name: "Записаться" }));
+    await user.click(screen.getByRole("button", { name: "30 минут" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "09:00" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.type(screen.getByLabelText("Имя"), "Мария");
+    await user.type(screen.getByLabelText("Email"), "maria@example.com");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    await user.click(screen.getByRole("button", { name: "Вернуться к бронированиям" }));
+
+    expect(screen.getByRole("heading", { name: "Бронирования" })).toBeInTheDocument();
+    expect(screen.getByText("Пятница, 17 апреля")).toBeInTheDocument();
+    expect(screen.getByText("Мария")).toBeInTheDocument();
   });
 
   it("returns to the beginning from the success screen", async () => {

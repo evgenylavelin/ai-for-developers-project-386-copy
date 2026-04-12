@@ -45,16 +45,16 @@ interface Bookings {
   ): BookingCreatedResponse | BadRequestError | NotFoundError | ConflictError;
 
   /**
-   * Owner-facing operation.
-   * Returns both active and cancelled bookings to preserve history.
+   * Public operation for the educational MVP.
+   * Returns the full booking history, including both active and cancelled bookings.
    */
   @get
   list(): BookingListResponse;
 
   /**
-   * Owner-facing and guest-facing operation.
+   * Public operation for the educational MVP.
    * Changes the booking status to cancelled instead of deleting the booking.
-   * Cancelling a booking makes its interval available again.
+   * Any visitor may cancel any active booking, and cancelling a booking makes its interval available again.
    */
   @post
   @route("/{bookingId}:cancel")

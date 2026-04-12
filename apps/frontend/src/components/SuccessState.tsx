@@ -1,9 +1,10 @@
 type SuccessStateProps = {
-  onRestart: () => void;
+  actionLabel?: string;
+  onAction: () => void;
   summary: string;
 };
 
-export function SuccessState({ onRestart, summary }: SuccessStateProps) {
+export function SuccessState({ actionLabel = "Вернуться в начало", onAction, summary }: SuccessStateProps) {
   return (
     <section className="panel">
       <p className="eyebrow">Call Planner</p>
@@ -12,8 +13,8 @@ export function SuccessState({ onRestart, summary }: SuccessStateProps) {
       <p className="selection-summary selection-summary--success">{summary}</p>
       <div className="actions">
         <span />
-        <button type="button" className="primary-button" onClick={onRestart}>
-          Вернуться в начало
+        <button type="button" className="primary-button" onClick={onAction}>
+          {actionLabel}
         </button>
       </div>
     </section>

@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { buildProgressSteps, deriveEntryState, formatSummary } from "./guestFlow";
 import {
+  bookingSchedule,
   multiEventTypes,
   noEventTypes,
   singleEventType,
-  slotDates,
 } from "../data/mockGuestFlow";
+import { buildAvailableDatesByEventType } from "./publicBookings";
 
 describe("deriveEntryState", () => {
   it("returns unavailable for zero event types", () => {
@@ -88,15 +89,17 @@ describe("mock guest flow fixtures", () => {
     expect(multiEventTypes).toHaveLength(3);
   });
 
-  it("exposes slot dates with weekday and slot coverage", () => {
-    expect(slotDates).toHaveLength(2);
-    expect(slotDates[0]).toMatchObject({
+  it("exposes schedule days and derived direct-booking slots", () => {
+    const datesByEventType = buildAvailableDatesByEventType(bookingSchedule, singleEventType, []);
+
+    expect(bookingSchedule).toHaveLength(5);
+    expect(datesByEventType.standard[0]).toMatchObject({
       isoDate: "2026-04-15",
       weekdayShort: "Ср",
       dayNumber: "15",
       fullLabel: "Среда, 15 апреля",
     });
-    expect(slotDates[0].slots).toEqual(["09:00", "10:30", "13:00", "16:30"]);
-    expect(slotDates[1].slots).toEqual([]);
+    expect(datesByEventType.standard[0].slots).toEqual(["09:00", "10:30", "13:00"]);
+    expect(datesByEventType.standard[4].slots).toEqual([]);
   });
 });

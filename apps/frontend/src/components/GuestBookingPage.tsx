@@ -6,7 +6,7 @@ import {
   deriveEntryState,
   formatSummary,
 } from "../lib/guestFlow";
-import type { EventType, SlotDate } from "../types";
+import type { AvailableDatesByEventType, BookingDraft, EventType, SlotDate } from "../types";
 import { ContactsStep } from "./ContactsStep";
 import { DateTimeStep } from "./DateTimeStep";
 import { EmptyState } from "./EmptyState";
@@ -17,10 +17,33 @@ import { SuccessState } from "./SuccessState";
 
 type GuestBookingPageProps = {
   eventTypes: EventType[];
-  dates: SlotDate[];
+  datesByEventType: AvailableDatesByEventType;
+  initialSelectedDate?: string;
+  successActionLabel?: string;
+  onBookingSubmit?: (draft: BookingDraft) => void;
+  onSuccessAction?: () => void;
 };
 
-export function GuestBookingPage({ eventTypes, dates }: GuestBookingPageProps) {
+function resolveDates(
+  entryState: ReturnType<typeof deriveEntryState>,
+  datesByEventType: AvailableDatesByEventType,
+  selectedEventTypeId: string,
+): SlotDate[] {
+  if (entryState.kind === "direct-booking") {
+    return datesByEventType[entryState.presetEventType.id] ?? [];
+  }
+
+  return selectedEventTypeId ? datesByEventType[selectedEventTypeId] ?? [] : [];
+}
+
+export function GuestBookingPage({
+  eventTypes,
+  datesByEventType,
+  initialSelectedDate,
+  successActionLabel,
+  onBookingSubmit,
+  onSuccessAction,
+}: GuestBookingPageProps) {
   const entryState = deriveEntryState(eventTypes);
   const startsWithEventType = entryState.kind === "choose-event-type";
   const [currentScreen, setCurrentScreen] = useState<
@@ -29,28 +52,34 @@ export function GuestBookingPage({ eventTypes, dates }: GuestBookingPageProps) {
   const [selectedEventTypeId, setSelectedEventTypeId] = useState(
     entryState.kind === "direct-booking" ? entryState.presetEventType.id : "",
   );
-  const [selectedDate, setSelectedDate] = useState(dates[0]?.isoDate ?? "");
+  const currentDates = resolveDates(entryState, datesByEventType, selectedEventTypeId);
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate ?? currentDates[0]?.isoDate ?? "");
   const [selectedTime, setSelectedTime] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [submissionError, setSubmissionError] = useState("");
+  const [successSummary, setSuccessSummary] = useState("");
 
   useEffect(() => {
-    const nextSelectedDate = dates.some((date) => date.isoDate === selectedDate)
+    const preferredDate =
+      initialSelectedDate && currentDates.some((date) => date.isoDate === initialSelectedDate)
+        ? initialSelectedDate
+        : currentDates[0]?.isoDate ?? "";
+    const nextSelectedDate = currentDates.some((date) => date.isoDate === selectedDate)
       ? selectedDate
-      : dates[0]?.isoDate ?? "";
+      : preferredDate;
 
     if (nextSelectedDate !== selectedDate) {
       setSelectedDate(nextSelectedDate);
     }
 
-    const activeDate = dates.find((date) => date.isoDate === nextSelectedDate);
+    const activeDate = currentDates.find((date) => date.isoDate === nextSelectedDate);
     const hasSelectedTime = activeDate?.slots.includes(selectedTime) ?? false;
 
     if (!hasSelectedTime && selectedTime) {
       setSelectedTime("");
     }
-  }, [dates, selectedDate, selectedTime]);
+  }, [currentDates, initialSelectedDate, selectedDate, selectedTime]);
 
   useEffect(() => {
     if (entryState.kind === "direct-booking") {
@@ -81,7 +110,7 @@ export function GuestBookingPage({ eventTypes, dates }: GuestBookingPageProps) {
 
   const steps = buildProgressSteps(entryState.kind);
   const selectedEventType = eventTypes.find((eventType) => eventType.id === selectedEventTypeId);
-  const activeDate = dates.find((date) => date.isoDate === selectedDate) ?? dates[0];
+  const activeDate = currentDates.find((date) => date.isoDate === selectedDate) ?? currentDates[0];
   const fullSummary = formatSummary({
     eventTypeTitle: selectedEventType?.title,
     fullDateLabel: activeDate?.fullLabel,
@@ -101,16 +130,33 @@ export function GuestBookingPage({ eventTypes, dates }: GuestBookingPageProps) {
           });
   const restartBookingFlow = () => {
     setSelectedEventTypeId(entryState.kind === "direct-booking" ? entryState.presetEventType.id : "");
-    setSelectedDate(dates[0]?.isoDate ?? "");
+    const nextDates = resolveDates(
+      entryState,
+      datesByEventType,
+      entryState.kind === "direct-booking" ? entryState.presetEventType.id : "",
+    );
+    const nextSelectedDate =
+      initialSelectedDate && nextDates.some((date) => date.isoDate === initialSelectedDate)
+        ? initialSelectedDate
+        : nextDates[0]?.isoDate ?? "";
+
+    setSelectedDate(nextSelectedDate);
     setSelectedTime("");
     setName("");
     setEmail("");
+    setSuccessSummary("");
     setSubmissionError("");
     setCurrentScreen(startsWithEventType ? "event-type" : "date-time");
   };
 
   if (currentScreen === "success") {
-    return <SuccessState summary={fullSummary} onRestart={restartBookingFlow} />;
+    return (
+      <SuccessState
+        actionLabel={successActionLabel}
+        summary={successSummary || fullSummary}
+        onAction={onSuccessAction ?? restartBookingFlow}
+      />
+    );
   }
 
   const activeIndex =
@@ -140,12 +186,29 @@ export function GuestBookingPage({ eventTypes, dates }: GuestBookingPageProps) {
         : "Укажите имя и email для подтверждения бронирования.";
 
   const submit = () => {
-    if (!name.trim() || !email.trim()) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName || !trimmedEmail || !selectedEventType || !selectedDate || !selectedTime) {
       setSubmissionError("Заполните имя и email, чтобы подтвердить бронирование.");
       return;
     }
 
     setSubmissionError("");
+    setSuccessSummary(
+      formatSummary({
+        eventTypeTitle: selectedEventType.title,
+        fullDateLabel: activeDate?.fullLabel,
+        timeLabel: selectedTime,
+      }),
+    );
+    onBookingSubmit?.({
+      eventTypeId: selectedEventType.id,
+      isoDate: selectedDate,
+      time: selectedTime,
+      guestName: trimmedName,
+      guestEmail: trimmedEmail,
+    });
     setCurrentScreen("success");
   };
 
@@ -162,14 +225,20 @@ export function GuestBookingPage({ eventTypes, dates }: GuestBookingPageProps) {
           selectedEventTypeId={selectedEventTypeId}
           onSelect={(eventTypeId) => {
             setSelectedEventTypeId(eventTypeId);
-            setSelectedDate(dates[0]?.isoDate ?? "");
+            const nextDates = datesByEventType[eventTypeId] ?? [];
+            const nextSelectedDate =
+              initialSelectedDate && nextDates.some((date) => date.isoDate === initialSelectedDate)
+                ? initialSelectedDate
+                : nextDates[0]?.isoDate ?? "";
+
+            setSelectedDate(nextSelectedDate);
             setSelectedTime("");
             setSubmissionError("");
           }}
         />
       ) : currentScreen === "date-time" ? (
         <DateTimeStep
-          dates={dates}
+          dates={currentDates}
           selectedDate={selectedDate}
           selectedTime={selectedTime}
           onSelectDate={(isoDate) => {
