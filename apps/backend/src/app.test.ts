@@ -155,10 +155,10 @@ describe("backend routes", () => {
     await app.close();
   });
 
-  it("rejects event types with non-positive duration", async () => {
+  it("rejects event types with duration outside 1 to 360 minutes", async () => {
     const app = createApp();
 
-    const response = await app.inject({
+    const tooSmallResponse = await app.inject({
       method: "POST",
       url: "/owner/event-types",
       payload: {
@@ -168,10 +168,96 @@ describe("backend routes", () => {
       },
     });
 
+    expect(tooSmallResponse.statusCode).toBe(400);
+    expect(tooSmallResponse.json()).toEqual({
+      code: "bad_request",
+      message: "durationMinutes must be an integer between 1 and 360.",
+    });
+
+    const tooLargeResponse = await app.inject({
+      method: "POST",
+      url: "/owner/event-types",
+      payload: {
+        title: "Длинная встреча",
+        description: "Слишком длинная длительность.",
+        durationMinutes: 361,
+      },
+    });
+
+    expect(tooLargeResponse.statusCode).toBe(400);
+    expect(tooLargeResponse.json()).toEqual({
+      code: "bad_request",
+      message: "durationMinutes must be an integer between 1 and 360.",
+    });
+
+    const acceptedResponse = await app.inject({
+      method: "POST",
+      url: "/owner/event-types",
+      payload: {
+        title: "Длинная стратегия",
+        description: "Граничное валидное значение.",
+        durationMinutes: 360,
+      },
+    });
+
+    expect(acceptedResponse.statusCode).toBe(201);
+    expect(acceptedResponse.json()).toEqual(
+      expect.objectContaining({
+        title: "Длинная стратегия",
+        durationMinutes: 360,
+      }),
+    );
+  
+    const minimumResponse = await app.inject({
+      method: "POST",
+      url: "/owner/event-types",
+      payload: {
+        title: "Короткая встреча",
+        description: "Минимальное валидное значение.",
+        durationMinutes: 1,
+      },
+    });
+
+    expect(minimumResponse.statusCode).toBe(201);
+    expect(minimumResponse.json()).toEqual(
+      expect.objectContaining({
+        title: "Короткая встреча",
+        durationMinutes: 1,
+      }),
+    );
+
+    await app.close();
+  });
+
+  it("rejects event type updates with duration above 360 minutes", async () => {
+    const app = createApp();
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/owner/event-types",
+      payload: {
+        title: "Стратегия",
+        description: "Базовый тип.",
+        durationMinutes: 60,
+      },
+    });
+
+    const { id } = createResponse.json() as { id: string };
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/owner/event-types/${id}`,
+      payload: {
+        title: "Стратегия",
+        description: "Базовый тип.",
+        durationMinutes: 361,
+      },
+    });
+
     expect(response.statusCode).toBe(400);
     expect(response.json()).toEqual({
       code: "bad_request",
-      message: "durationMinutes must be a positive integer.",
+      message: "durationMinutes must be an integer between 1 and 360.",
     });
 
     await app.close();

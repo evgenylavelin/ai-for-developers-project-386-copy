@@ -13,7 +13,7 @@ import {
   getOwnerEventTypes,
   updateOwnerEventType,
 } from "./lib/eventTypesApi";
-import { warmScheduleCache } from "./lib/scheduleApi";
+import { getSchedule, warmScheduleCache } from "./lib/scheduleApi";
 import {
   buildAvailableDatesFromSchedule,
   cancelPublicBooking,
@@ -39,6 +39,7 @@ import type {
   EventType,
   OwnerEventType,
   OwnerEventTypeInput,
+  OwnerSchedule,
   ScheduleDay,
   Workspace,
 } from "./types";
@@ -156,6 +157,7 @@ export default function App({ scenario }: AppProps) {
   const [selectedHomeDate, setSelectedHomeDate] = useState(
     scenarioData ? getInitialSelectedDate(scenarioData.schedule, scenarioData.bookings) : "",
   );
+  const [ownerSchedule, setOwnerSchedule] = useState<OwnerSchedule | null>(null);
   const [selectedPublicBookingEventTypeId, setSelectedPublicBookingEventTypeId] = useState<
     string | undefined
   >(undefined);
@@ -187,6 +189,7 @@ export default function App({ scenario }: AppProps) {
     setScreen(resolveInitialScreen(nextScenarioData));
     setSuccessDestination(nextScenarioData.bookings.length > 0 ? "home" : "restart");
     setSelectedHomeDate(getInitialSelectedDate(nextScenarioData.schedule, nextScenarioData.bookings));
+    setOwnerSchedule(null);
     setSelectedPublicBookingEventTypeId(undefined);
   }, [isScenarioMode, scenario]);
 
@@ -220,12 +223,14 @@ export default function App({ scenario }: AppProps) {
       };
       let loadedGuestEventTypes: EventType[] = [];
       let loadedBookings: Booking[] = [];
+      let loadedOwnerSchedule: OwnerSchedule | null = null;
       let loadedAvailability: AvailabilityByEventType = {};
 
       try {
-        const [guestEventTypesResult, bookingsResult] = await Promise.allSettled([
+        const [guestEventTypesResult, bookingsResult, ownerScheduleResult] = await Promise.allSettled([
           getGuestEventTypes(),
           listBookings(),
+          getSchedule(),
         ]);
 
         if (guestEventTypesResult.status === "fulfilled") {
@@ -249,6 +254,10 @@ export default function App({ scenario }: AppProps) {
               ? bookingsResult.reason.message
               : "Не удалось загрузить бронирования.";
           nextStatuses.bookings = "error";
+        }
+
+        if (ownerScheduleResult.status === "fulfilled") {
+          loadedOwnerSchedule = ownerScheduleResult.value;
         }
 
         if (nextStatuses.eventTypes === "ready") {
@@ -279,6 +288,7 @@ export default function App({ scenario }: AppProps) {
 
         setGuestEventTypes(loadedGuestEventTypes);
         setBookings(loadedBookings);
+        setOwnerSchedule(loadedOwnerSchedule);
         setAvailabilityByEventType(loadedAvailability);
         setPublicLoadErrors(nextErrors);
         setPublicLoadStatuses(nextStatuses);
@@ -576,6 +586,8 @@ export default function App({ scenario }: AppProps) {
                 startupWarning={publicStartupWarning}
                 bookingsState={publicLoadStatuses.bookings}
                 availabilityState={publicLoadStatuses.availability}
+                scheduleDays={isScenarioMode ? schedule : undefined}
+                ownerSchedule={isScenarioMode ? null : ownerSchedule}
                 bookingEntryDisabledReason={bookingEntryDisabledReason}
                 isRetryingStartup={!isScenarioMode && loading}
                 workspace="public"

@@ -6,7 +6,14 @@ import {
   listBookingsForDate,
 } from "../lib/publicBookings";
 import type { CalendarDay } from "../lib/publicCalendar";
-import type { AvailableDatesByEventType, Booking, EventType, Workspace } from "../types";
+import type {
+  AvailableDatesByEventType,
+  Booking,
+  EventType,
+  OwnerSchedule,
+  ScheduleDay,
+  Workspace,
+} from "../types";
 import { WorkspaceHero } from "./WorkspaceHero";
 
 type PublicBookingsHomeProps = {
@@ -19,6 +26,8 @@ type PublicBookingsHomeProps = {
   startupWarning?: string;
   bookingsState?: "loading" | "ready" | "error";
   availabilityState?: "idle" | "loading" | "ready" | "error";
+  scheduleDays?: ScheduleDay[];
+  ownerSchedule?: OwnerSchedule | null;
   bookingEntryDisabledReason?: string;
   isRetryingStartup?: boolean;
   workspace: Workspace;
@@ -47,6 +56,8 @@ export function PublicBookingsHome({
   startupWarning,
   bookingsState = "ready",
   availabilityState = "ready",
+  scheduleDays,
+  ownerSchedule,
   bookingEntryDisabledReason,
   isRetryingStartup = false,
   workspace,
@@ -101,6 +112,7 @@ export function PublicBookingsHome({
     bookings,
     availableDatesByEventType,
     selectedFilterId,
+    { scheduleDays, ownerSchedule, eventTypes },
   );
   const selectedDay = daySummaries.find((day) => day.isoDate === selectedDate) ?? daySummaries[0];
   const selectedDayBookings = selectedDay ? listBookingsForDate(bookings, selectedDay.isoDate) : [];
@@ -111,7 +123,11 @@ export function PublicBookingsHome({
       : (availableDatesByEventType[selectedFilterId] ?? []).find(
           (day) => day.isoDate === selectedDay.isoDate,
         )?.slots.length ?? 0;
-  const isBookingEntryDisabled = Boolean(bookingEntryDisabledReason);
+  const isSelectedDayGloballyUnavailable = Boolean(selectedDay?.isGloballyUnavailable);
+  const selectedDayGuardMessage = isSelectedDayGloballyUnavailable
+    ? "На этот день прием не ведется по расписанию."
+    : bookingEntryDisabledReason;
+  const isBookingEntryDisabled = isSelectedDayGloballyUnavailable || Boolean(bookingEntryDisabledReason);
   const isBookingsKnown = bookingsState === "ready";
   const isAvailabilityKnown = availabilityState === "ready";
   const showsMissingEventTypesOnboarding =
@@ -122,7 +138,7 @@ export function PublicBookingsHome({
       <WorkspaceHero
         eyebrow="Call Planner"
         title="Бронирования"
-        description="Публичный календарь всех встреч на ближайшие 14 дней. В этой учебной версии детали встреч и отмена доступны без авторизации."
+        description="Публичный календарь встреч на ближайшие 14 дней."
         workspace={workspace}
         onChangeWorkspace={onChangeWorkspace}
         className="workspace-hero--public"
@@ -213,21 +229,13 @@ export function PublicBookingsHome({
         <section className="bookings-card">
           <div className="bookings-card__header">
             <p className="bookings-card__eyebrow">Календарь</p>
-            <p className="bookings-card__caption">
-              {!isBookingsKnown
-                ? "Статус занятых слотов временно недоступен."
-                : !isAvailabilityKnown && selectedFilterId !== ALL_EVENT_TYPES_FILTER
-                  ? "Занятые слоты показаны, свободные слоты уточняются."
-                  : selectedFilterId === ALL_EVENT_TYPES_FILTER
-                ? "Показаны только занятые слоты."
-                : "Показаны занятые и свободные слоты."}
-            </p>
           </div>
 
           <div className="booking-calendar-grid">
             {daySummaries.map((day) => {
               const selected = day.isoDate === selectedDay?.isoDate;
               const noFreeSlots =
+                !day.isGloballyUnavailable &&
                 selectedFilterId !== ALL_EVENT_TYPES_FILTER &&
                 isAvailabilityKnown &&
                 (day.freeCount ?? 0) === 0;
@@ -241,6 +249,7 @@ export function PublicBookingsHome({
                     "booking-calendar-day",
                     selected ? "booking-calendar-day--selected" : "",
                     day.bookedCount > 0 ? "booking-calendar-day--booked" : "",
+                    day.isGloballyUnavailable ? "booking-calendar-day--unavailable" : "",
                     noFreeSlots ? "booking-calendar-day--full" : "",
                   ]
                     .filter(Boolean)
@@ -250,16 +259,18 @@ export function PublicBookingsHome({
                   <span className="booking-calendar-day__weekday">{day.weekdayShort}</span>
                   <span className="booking-calendar-day__number">{day.dayNumber}</span>
                   <span className="booking-calendar-day__meta">
-                    {isBookingsKnown ? (
+                    {day.isGloballyUnavailable ? null : isBookingsKnown ? (
                       <strong>{day.bookedCount} занято</strong>
                     ) : (
                       <strong>
                         {bookingsState === "loading"
                           ? "Бронирования загружаются"
-                            : "—"}
+                          : "—"}
                       </strong>
                     )}
-                    {selectedFilterId === ALL_EVENT_TYPES_FILTER ? null : isAvailabilityKnown ? (
+                    {day.isGloballyUnavailable ? (
+                      <span className="booking-calendar-day__status">Запись недоступна</span>
+                    ) : selectedFilterId === ALL_EVENT_TYPES_FILTER ? null : isAvailabilityKnown ? (
                       <span>{day.freeCount} свободно</span>
                     ) : (
                       <span>
@@ -299,9 +310,9 @@ export function PublicBookingsHome({
             </button>
           </div>
 
-          {bookingEntryDisabledReason ? (
+          {selectedDayGuardMessage ? (
             <p id="booking-entry-guard" className="availability-note">
-              {bookingEntryDisabledReason}
+              {selectedDayGuardMessage}
             </p>
           ) : selectedDayEventType && isAvailabilityKnown && selectedDayFreeCount === 0 ? (
             <p className="availability-note">

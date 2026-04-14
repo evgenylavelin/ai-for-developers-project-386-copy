@@ -103,6 +103,7 @@ export type CalendarDaySummary = {
   fullLabel: string;
   bookedCount: number;
   freeCount?: number;
+  isGloballyUnavailable: boolean;
 };
 
 export type EntryStateKind =

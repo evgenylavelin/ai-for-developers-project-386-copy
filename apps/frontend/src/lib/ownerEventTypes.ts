@@ -1,5 +1,9 @@
 import type { OwnerEventType, OwnerEventTypeForm, OwnerEventTypeInput } from "../types";
 
+const MIN_EVENT_TYPE_DURATION_MINUTES = 1;
+const MAX_EVENT_TYPE_DURATION_MINUTES = 360;
+const EVENT_TYPE_DURATION_ERROR = "Длительность должна быть указана в минутах от 1 до 360.";
+
 export function createEmptyOwnerEventTypeForm(): OwnerEventTypeForm {
   return {
     title: "",
@@ -23,8 +27,12 @@ export function validateOwnerEventTypeForm(form: OwnerEventTypeForm): string {
 
   const durationMinutes = Number(form.durationMinutes);
 
-  if (!Number.isInteger(durationMinutes) || durationMinutes <= 0) {
-    return "Длительность должна быть указана в минутах и быть больше нуля.";
+  if (
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes < MIN_EVENT_TYPE_DURATION_MINUTES ||
+    durationMinutes > MAX_EVENT_TYPE_DURATION_MINUTES
+  ) {
+    return EVENT_TYPE_DURATION_ERROR;
   }
 
   return "";

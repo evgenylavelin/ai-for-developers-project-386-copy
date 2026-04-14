@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingSchedule, multiEventTypes, publicBookings } from "../data/mockGuestFlow";
+import type { OwnerSchedule } from "../types";
 import {
   ALL_EVENT_TYPES_FILTER,
   buildAvailableDatesFromSchedule,
@@ -9,6 +10,12 @@ import {
   getInitialSelectedDate,
   listBookingsForDate,
 } from "./publicBookings";
+
+const shortOwnerSchedule: OwnerSchedule = {
+  workingDays: ["wednesday", "thursday", "friday"],
+  startTime: "09:00",
+  endTime: "09:10",
+};
 
 describe("buildAvailableDatesFromSchedule", () => {
   it("removes active booking slots from event-type availability", () => {
@@ -68,6 +75,71 @@ describe("buildCalendarDaySummaries", () => {
       isoDate: "2026-04-15",
       bookedCount: 1,
       freeCount: 2,
+    });
+  });
+
+  it("marks days with zero schedule slots across all event types as globally unavailable", () => {
+    const datesByEventType = buildAvailableDatesFromSchedule(
+      bookingSchedule,
+      multiEventTypes,
+      publicBookings,
+    );
+
+    expect(
+      buildCalendarDaySummaries(
+        bookingSchedule,
+        publicBookings,
+        datesByEventType,
+        ALL_EVENT_TYPES_FILTER,
+        { scheduleDays: bookingSchedule },
+      )[4],
+    ).toMatchObject({
+      isoDate: "2026-04-19",
+      isGloballyUnavailable: true,
+      freeCount: undefined,
+    });
+  });
+
+  it("does not treat a working day with zero free slots for one event type as globally unavailable", () => {
+    const datesByEventType = buildAvailableDatesFromSchedule(
+      bookingSchedule,
+      multiEventTypes,
+      publicBookings,
+    );
+
+    expect(
+      buildCalendarDaySummaries(
+        bookingSchedule,
+        publicBookings,
+        datesByEventType,
+        "deep-dive",
+        { scheduleDays: bookingSchedule },
+      )[2],
+    ).toMatchObject({
+      isoDate: "2026-04-17",
+      freeCount: 0,
+      isGloballyUnavailable: false,
+    });
+  });
+
+  it("marks working days as globally unavailable when the schedule window is shorter than every event type", () => {
+    const datesByEventType = buildAvailableDatesFromSchedule(
+      bookingSchedule,
+      multiEventTypes,
+      publicBookings,
+    );
+
+    expect(
+      buildCalendarDaySummaries(
+        bookingSchedule,
+        publicBookings,
+        datesByEventType,
+        ALL_EVENT_TYPES_FILTER,
+        { ownerSchedule: shortOwnerSchedule, eventTypes: multiEventTypes },
+      )[0],
+    ).toMatchObject({
+      isoDate: "2026-04-15",
+      isGloballyUnavailable: true,
     });
   });
 });

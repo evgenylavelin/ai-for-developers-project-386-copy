@@ -5,6 +5,11 @@ import { InMemoryBookingRepository } from "../repositories/inMemoryBookingReposi
 import { InMemoryEventTypeRepository } from "../repositories/inMemoryEventTypeRepository.js";
 import type { CreateEventTypeInput, EventType, OwnerEventType, StoredEventType } from "../types.js";
 
+const MIN_EVENT_TYPE_DURATION_MINUTES = 1;
+const MAX_EVENT_TYPE_DURATION_MINUTES = 360;
+const EVENT_TYPE_DURATION_ERROR =
+  `durationMinutes must be an integer between ${MIN_EVENT_TYPE_DURATION_MINUTES} and ${MAX_EVENT_TYPE_DURATION_MINUTES}.`;
+
 export class EventTypeService {
   constructor(
     private readonly repository: InMemoryEventTypeRepository,
@@ -21,10 +26,7 @@ export class EventTypeService {
 
   createEventType(input: unknown): EventType {
     const payload = toEventTypeInput(input);
-
-    if (!Number.isInteger(payload.durationMinutes) || payload.durationMinutes <= 0) {
-      throw new AppError(400, "bad_request", "durationMinutes must be a positive integer.");
-    }
+    assertValidEventTypeDuration(payload.durationMinutes);
 
     const created = this.repository.save({
       id: randomUUID(),
@@ -40,10 +42,7 @@ export class EventTypeService {
   updateEventType(eventTypeId: string, input: unknown): OwnerEventType {
     const eventType = this.getStoredEventType(eventTypeId);
     const payload = toEventTypeInput(input);
-
-    if (!Number.isInteger(payload.durationMinutes) || payload.durationMinutes <= 0) {
-      throw new AppError(400, "bad_request", "durationMinutes must be a positive integer.");
-    }
+    assertValidEventTypeDuration(payload.durationMinutes);
 
     const updated = this.repository.save({
       ...eventType,
@@ -124,7 +123,7 @@ function toEventTypeInput(input: unknown): CreateEventTypeInput {
   }
 
   if (typeof durationMinutes !== "number") {
-    throw new AppError(400, "bad_request", "durationMinutes must be a positive integer.");
+    throw new AppError(400, "bad_request", EVENT_TYPE_DURATION_ERROR);
   }
 
   return {
@@ -132,4 +131,14 @@ function toEventTypeInput(input: unknown): CreateEventTypeInput {
     description: description?.trim() || undefined,
     durationMinutes,
   };
+}
+
+function assertValidEventTypeDuration(durationMinutes: number): void {
+  if (
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes < MIN_EVENT_TYPE_DURATION_MINUTES ||
+    durationMinutes > MAX_EVENT_TYPE_DURATION_MINUTES
+  ) {
+    throw new AppError(400, "bad_request", EVENT_TYPE_DURATION_ERROR);
+  }
 }

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -6,13 +6,21 @@ import App from "./App";
 import { GuestBookingPage } from "./components/GuestBookingPage";
 import { bookingSchedule, multiEventTypes, singleEventType } from "./data/mockGuestFlow";
 import { buildPublicCalendarDays } from "./lib/publicCalendar";
+import * as publicBookingsModule from "./lib/publicBookings";
 import { buildAvailableDatesFromSchedule } from "./lib/publicBookings";
 import { resetScheduleCache } from "./lib/scheduleApi";
-import type { OwnerEventType } from "./types";
+import type { OwnerEventType, OwnerSchedule } from "./types";
+
+const defaultOwnerSchedule: OwnerSchedule = {
+  workingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+  startTime: "09:00",
+  endTime: "18:00",
+};
 
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  window.localStorage.clear();
   resetScheduleCache();
 });
 
@@ -83,6 +91,10 @@ function createOwnerEventTypesFetchMock(initialOwnerEventTypes?: OwnerEventType[
           status: "active",
         },
       ]);
+    }
+
+    if (url.endsWith("/schedule")) {
+      return createJsonResponse(defaultOwnerSchedule);
     }
 
     if (/\/event-types\/[^/]+\/availability$/.test(url)) {
@@ -268,6 +280,10 @@ describe("App", () => {
         );
       }
 
+      if (url.endsWith("/schedule")) {
+        return Promise.resolve(createJsonResponse(defaultOwnerSchedule));
+      }
+
       if (url.endsWith("/event-types/standard/availability")) {
         return Promise.resolve(
           createJsonResponse([
@@ -291,7 +307,67 @@ describe("App", () => {
     expect(fetchMock).toHaveBeenCalledWith("/event-types");
     expect(fetchMock).toHaveBeenCalledWith("/owner/event-types");
     expect(fetchMock).toHaveBeenCalledWith("/bookings");
+    expect(fetchMock).toHaveBeenCalledWith("/schedule");
     expect(fetchMock).toHaveBeenCalledWith("/event-types/standard/availability");
+  });
+
+  it("passes the loaded owner schedule into public-home calendar summaries", async () => {
+    const bookingDay = createApiBookingDay();
+    const buildCalendarDaySummariesSpy = vi.spyOn(publicBookingsModule, "buildCalendarDaySummaries");
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith("/owner/event-types")) {
+        return Promise.resolve(createJsonResponse([]));
+      }
+
+      if (url.endsWith("/event-types")) {
+        return Promise.resolve(createJsonResponse(singleEventType));
+      }
+
+      if (url.endsWith("/bookings")) {
+        return Promise.resolve(createJsonResponse([]));
+      }
+
+      if (url.endsWith("/schedule")) {
+        return Promise.resolve(createJsonResponse(defaultOwnerSchedule));
+      }
+
+      if (/\/event-types\/[^/]+\/availability$/.test(url)) {
+        return Promise.resolve(
+          createJsonResponse([
+            {
+              startAt: `${bookingDay.isoDate}T10:00:00Z`,
+              endAt: `${bookingDay.isoDate}T10:30:00Z`,
+            },
+          ]),
+        );
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Бронирования" })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        buildCalendarDaySummariesSpy.mock.calls.some((call) => {
+          const context = call[4];
+
+          return JSON.stringify(context) === JSON.stringify({
+            ownerSchedule: defaultOwnerSchedule,
+            eventTypes: singleEventType,
+          });
+        }),
+      ).toBe(true);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/schedule");
   });
 
   it("opens owner event types after remote startup when there are no public event types", async () => {
@@ -1307,6 +1383,39 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("rejects an invalid email on the contacts step", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="single" />);
+
+    await user.click(screen.getByRole("button", { name: "10:30" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.type(screen.getByRole("textbox", { name: "Имя" }), "Иван");
+    await user.type(screen.getByRole("textbox", { name: "Email" }), "ivan@example");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(screen.getByText("Укажите корректный email.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Введите контактные данные" }),
+    ).toBeInTheDocument();
+  });
+
+  it("prefills saved guest contacts when the booking flow opens again", async () => {
+    const user = userEvent.setup();
+
+    render(<App scenario="single" />);
+
+    await user.click(screen.getByRole("button", { name: "10:30" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.type(screen.getByRole("textbox", { name: "Имя" }), "Мария");
+    await user.type(screen.getByRole("textbox", { name: "Email" }), "maria@example.com");
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+
+    expect(screen.getByRole("textbox", { name: "Имя" })).toHaveValue("Мария");
+    expect(screen.getByRole("textbox", { name: "Email" })).toHaveValue("maria@example.com");
+  });
+
   it("shows the success screen after valid contact submission", async () => {
     const user = userEvent.setup();
 
@@ -1450,6 +1559,7 @@ describe("App", () => {
     expect(screen.getByRole("textbox", { name: "Название" })).toHaveValue("");
     expect(screen.getByRole("textbox", { name: "Описание" })).toHaveValue("");
     expect(screen.getByRole("spinbutton", { name: "Длительность" })).toHaveValue(null);
+    expect(screen.getByRole("spinbutton", { name: "Длительность" })).toHaveAttribute("max", "360");
     expect(screen.queryByRole("button", { name: "Удалить" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Архивировать" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Подтвердить удаление|Подтвердить архивирование/)).not.toBeInTheDocument();
@@ -1600,7 +1710,7 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Удалить" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Архивировать" })).toBeInTheDocument();
-    expect(within(selectedEventType).getByText("Использовался в бронированиях")).toBeInTheDocument();
+    expect(within(selectedEventType).getByText("Использовался")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Архивировать" }));
 
@@ -1620,7 +1730,7 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     expect(within(selectedEventType).getByText("Архив")).toBeInTheDocument();
-    expect(within(selectedEventType).getByText("Использовался в бронированиях")).toBeInTheDocument();
+  expect(within(selectedEventType).getByText("Использовался")).toBeInTheDocument();
 
     await user.click(
       within(screen.getByRole("navigation", { name: "Разделы рабочего пространства" })).getByRole("button", {

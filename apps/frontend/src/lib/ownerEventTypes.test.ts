@@ -44,7 +44,7 @@ describe("ownerEventTypes helpers", () => {
     });
   });
 
-  it("validates required fields and positive integer duration", () => {
+  it("validates required fields and duration range", () => {
     expect(
       validateOwnerEventTypeForm({
         title: "   ",
@@ -59,13 +59,37 @@ describe("ownerEventTypes helpers", () => {
         description: "   ",
         durationMinutes: "0",
       }),
-    ).toBe("Длительность должна быть указана в минутах и быть больше нуля.");
+    ).toBe("Длительность должна быть указана в минутах от 1 до 360.");
+
+    expect(
+      validateOwnerEventTypeForm({
+        title: "Созвон",
+        description: "   ",
+        durationMinutes: "361",
+      }),
+    ).toBe("Длительность должна быть указана в минутах от 1 до 360.");
+
+    expect(
+      validateOwnerEventTypeForm({
+        title: "Созвон",
+        description: "   ",
+        durationMinutes: "1",
+      }),
+    ).toBe("");
 
     expect(
       validateOwnerEventTypeForm({
         title: "Созвон",
         description: "   ",
         durationMinutes: "45",
+      }),
+    ).toBe("");
+
+    expect(
+      validateOwnerEventTypeForm({
+        title: "Созвон",
+        description: "   ",
+        durationMinutes: "360",
       }),
     ).toBe("");
   });

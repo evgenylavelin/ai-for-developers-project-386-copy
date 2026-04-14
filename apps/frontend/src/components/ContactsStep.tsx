@@ -2,6 +2,7 @@ type ContactsStepProps = {
   name: string;
   email: string;
   error?: string;
+  emailInvalid?: boolean;
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
 };
@@ -10,6 +11,7 @@ export function ContactsStep({
   name,
   email,
   error,
+  emailInvalid,
   onNameChange,
   onEmailChange,
 }: ContactsStepProps) {
@@ -44,6 +46,7 @@ export function ContactsStep({
           name="email"
           autoComplete="email"
           required
+          aria-invalid={emailInvalid}
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
         />

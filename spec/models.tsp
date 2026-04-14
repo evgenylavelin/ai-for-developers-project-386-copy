@@ -52,6 +52,7 @@ model EventType {
   title: string;
   description?: string;
   @minValue(1)
+  @maxValue(360)
   durationMinutes: int32;
 }
 
@@ -60,6 +61,7 @@ model OwnerEventType {
   title: string;
   description?: string;
   @minValue(1)
+  @maxValue(360)
   durationMinutes: int32;
   isArchived: boolean;
   hasBookings: boolean;
@@ -84,6 +86,7 @@ model CreateEventTypeRequest {
   title: string;
   description?: string;
   @minValue(1)
+  @maxValue(360)
   durationMinutes: int32;
 }
 
@@ -91,6 +94,7 @@ model UpdateEventTypeRequest {
   title: string;
   description?: string;
   @minValue(1)
+  @maxValue(360)
   durationMinutes: int32;
 }
 

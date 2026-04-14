@@ -34,7 +34,7 @@ function getStatusBadges(eventType: OwnerEventType): string[] {
   const badges = [eventType.isArchived ? "Архив" : "Активен"];
 
   if (eventType.hasBookings) {
-    badges.push("Использовался в бронированиях");
+    badges.push("Использовался");
   }
 
   return badges;
@@ -280,7 +280,7 @@ export function OwnerEventTypesPage({
         <WorkspaceHero
           eyebrow="Call Planner"
           title="Типы событий"
-          description="Настраивайте карточки встреч через backend-источник данных. Изменения сразу синхронизируются с owner workspace и публичным списком доступных типов."
+          description="Настройте карточки встреч, чтобы они сразу появились в публичном списке."
           workspace={workspace}
           onChangeWorkspace={onChangeWorkspace}
           className="workspace-hero--owner"
@@ -442,6 +442,7 @@ export function OwnerEventTypesPage({
                 <input
                   type="number"
                   min="1"
+                  max="360"
                   step="5"
                   name="durationMinutes"
                   required

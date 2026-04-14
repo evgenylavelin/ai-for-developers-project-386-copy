@@ -2,13 +2,31 @@ import type {
   AvailableDatesByEventType,
   Booking,
   CalendarDaySummary,
+  DayOfWeek,
   EventType,
+  OwnerSchedule,
   ScheduleDay,
 } from "../types";
 
 import type { CalendarDay } from "./publicCalendar";
 
 export const ALL_EVENT_TYPES_FILTER = "all";
+
+type CalendarSummaryContext = {
+  scheduleDays?: ScheduleDay[];
+  ownerSchedule?: OwnerSchedule | null;
+  eventTypes?: EventType[];
+};
+
+const DAY_OF_WEEK_BY_INDEX: DayOfWeek[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
 
 function getBookingDate(booking: Booking): string {
   return booking.startAt.slice(0, 10);
@@ -68,12 +86,57 @@ export function buildAvailableDatesFromSchedule(
   );
 }
 
+function getScheduleDayBlockedDates(scheduleDays: ScheduleDay[]): Set<string> {
+  return new Set(
+    scheduleDays
+      .filter(
+        (day) =>
+          Object.values(day.slotsByEventType).reduce(
+            (slotCount, slots) => slotCount + slots.length,
+            0,
+          ) === 0,
+      )
+      .map((day) => day.isoDate),
+  );
+}
+
+function getDayOfWeek(isoDate: string): DayOfWeek {
+  return DAY_OF_WEEK_BY_INDEX[new Date(`${isoDate}T00:00:00Z`).getUTCDay()];
+}
+
+function getOwnerScheduleBlockedDates(
+  calendarDays: CalendarDay[],
+  ownerSchedule: OwnerSchedule,
+  eventTypes: EventType[],
+): Set<string> {
+  const scheduleRangeMinutes = getTimeInMinutes(ownerSchedule.endTime) - getTimeInMinutes(ownerSchedule.startTime);
+  const hasAnyFittingEventType = eventTypes.some(
+    (eventType) => eventType.durationMinutes <= scheduleRangeMinutes,
+  );
+
+  return new Set(
+    calendarDays
+      .filter(
+        (day) =>
+          !ownerSchedule.workingDays.includes(getDayOfWeek(day.isoDate)) || !hasAnyFittingEventType,
+      )
+      .map((day) => day.isoDate),
+  );
+}
+
 export function buildCalendarDaySummaries(
   calendarDays: CalendarDay[],
   bookings: Booking[],
   availableDatesByEventType: AvailableDatesByEventType,
   selectedFilterId: string,
+  context: CalendarSummaryContext = {},
 ): CalendarDaySummary[] {
+  const globallyUnavailableDates = context.scheduleDays
+    ? getScheduleDayBlockedDates(context.scheduleDays)
+    : context.ownerSchedule && context.eventTypes
+      ? getOwnerScheduleBlockedDates(calendarDays, context.ownerSchedule, context.eventTypes)
+    : new Set<string>();
+
   return calendarDays.map((day) => {
     const activeBookings = bookings.filter(
       (booking) => booking.status === "active" && getBookingDate(booking) === day.isoDate,
@@ -96,6 +159,7 @@ export function buildCalendarDaySummaries(
       fullLabel: day.fullLabel,
       bookedCount,
       freeCount,
+      isGloballyUnavailable: globallyUnavailableDates.has(day.isoDate),
     };
   });
 }
@@ -134,4 +198,10 @@ function addMinutes(time: string, minutesToAdd: number): string {
   const endMinutes = (totalMinutes % 60).toString().padStart(2, "0");
 
   return `${endHours}:${endMinutes}`;
+}
+
+function getTimeInMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  return hours * 60 + minutes;
 }

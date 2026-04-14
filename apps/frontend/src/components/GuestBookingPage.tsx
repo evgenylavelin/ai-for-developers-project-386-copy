@@ -15,6 +15,64 @@ import { ProgressSteps } from "./ProgressSteps";
 import { SelectionSummary } from "./SelectionSummary";
 import { SuccessState } from "./SuccessState";
 
+const GUEST_CONTACTS_STORAGE_KEY = "callplanner:guest-booking-contacts";
+
+type StoredGuestContacts = {
+  name: string;
+  email: string;
+};
+
+function isStoredGuestContacts(value: unknown): value is StoredGuestContacts {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    "email" in value &&
+    typeof value.name === "string" &&
+    typeof value.email === "string"
+  );
+}
+
+function readStoredGuestContacts(): StoredGuestContacts {
+  if (typeof window === "undefined") {
+    return { name: "", email: "" };
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(GUEST_CONTACTS_STORAGE_KEY);
+
+    if (!rawValue) {
+      return { name: "", email: "" };
+    }
+
+    const parsedValue: unknown = JSON.parse(rawValue);
+
+    if (!isStoredGuestContacts(parsedValue)) {
+      return { name: "", email: "" };
+    }
+
+    return parsedValue;
+  } catch {
+    return { name: "", email: "" };
+  }
+}
+
+function writeStoredGuestContacts(contacts: StoredGuestContacts) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(GUEST_CONTACTS_STORAGE_KEY, JSON.stringify(contacts));
+  } catch {
+    // Ignore storage failures and keep the form usable.
+  }
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 type GuestBookingPageProps = {
   eventTypes: EventType[];
   datesByEventType: AvailableDatesByEventType;
@@ -48,6 +106,7 @@ export function GuestBookingPage({
   onSuccessAction,
   onExit,
 }: GuestBookingPageProps) {
+  const [storedContacts] = useState(() => readStoredGuestContacts());
   const entryState = deriveEntryState(eventTypes, initialSelectedEventTypeId);
   const isThreeStepFlow =
     entryState.kind === "choose-event-type" || entryState.kind === "prefilled-public-booking";
@@ -64,11 +123,15 @@ export function GuestBookingPage({
   const currentDates = resolveDates(entryState, datesByEventType, selectedEventTypeId);
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate ?? currentDates[0]?.isoDate ?? "");
   const [selectedTime, setSelectedTime] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState(storedContacts.name);
+  const [email, setEmail] = useState(storedContacts.email);
   const [submissionError, setSubmissionError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successSummary, setSuccessSummary] = useState("");
+
+  useEffect(() => {
+    writeStoredGuestContacts({ name, email });
+  }, [email, name]);
 
   useEffect(() => {
     const preferredDate =
@@ -139,6 +202,8 @@ export function GuestBookingPage({
             timeLabel: selectedTime || undefined,
           });
   const restartBookingFlow = () => {
+    const persistedContacts = readStoredGuestContacts();
+
     setSelectedEventTypeId(
       entryState.kind === "direct-booking" || entryState.kind === "prefilled-public-booking"
         ? entryState.presetEventType.id
@@ -158,8 +223,8 @@ export function GuestBookingPage({
 
     setSelectedDate(nextSelectedDate);
     setSelectedTime("");
-    setName("");
-    setEmail("");
+  setName(persistedContacts.name);
+  setEmail(persistedContacts.email);
     setSuccessSummary("");
     setSubmissionError("");
     setIsSubmitting(false);
@@ -227,6 +292,11 @@ export function GuestBookingPage({
 
     if (!trimmedName || !trimmedEmail || !selectedEventType || !selectedDate || !selectedTime) {
       setSubmissionError("Заполните имя и email, чтобы подтвердить бронирование.");
+      return;
+    }
+
+    if (!isValidEmail(trimmedEmail)) {
+      setSubmissionError("Укажите корректный email.");
       return;
     }
 
@@ -311,6 +381,7 @@ export function GuestBookingPage({
           name={name}
           email={email}
           error={submissionError}
+          emailInvalid={Boolean(email.trim()) && !isValidEmail(email.trim())}
           onNameChange={(value) => {
             setName(value);
             if (submissionError) {

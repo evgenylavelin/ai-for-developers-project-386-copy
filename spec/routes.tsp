@@ -54,7 +54,7 @@ interface OwnerEventTypes {
 
   /**
    * Owner-facing operation.
-   * Creates a new event type with a positive duration.
+    * Creates a new event type with duration from 1 to 360 minutes.
    */
   @post
   create(@body body: CreateEventTypeRequest): EventTypeCreatedResponse | BadRequestError;
