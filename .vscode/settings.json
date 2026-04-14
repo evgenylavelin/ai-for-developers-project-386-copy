@@ -1,0 +1,10 @@
+{
+    "chat.mcp.serverSampling": {
+        "callplanner/.vscode/mcp.json: render": {
+            "allowedModels": [
+                "copilotcli/claude-sonnet-4.6",
+                "copilotcli/gpt-5.4"
+            ]
+        }
+    }
+}

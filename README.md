@@ -141,6 +141,9 @@ make dev
 Хранилище backend остается in-memory: после перезапуска сервера расписание, типы событий и
 бронирования сбрасываются.
 
+В production backend отдает собранный frontend из `apps/frontend/dist`, поэтому приложение
+запускается как единый сервис на одном порту.
+
 Сборка frontend-приложения:
 
 ```bash
@@ -157,6 +160,14 @@ npm run frontend:test -- --run
 
 ```bash
 npm run backend:dev
+```
+
+Production-запуск backend после сборки:
+
+```bash
+npm run frontend:build
+npm run backend:build
+PORT=3000 npm --prefix apps/backend run start
 ```
 
 Сборка backend-приложения:
@@ -179,6 +190,26 @@ npm run e2e:test
 ```
 
 Playwright-спеки находятся в `tests/e2e/` и поднимают frontend и backend вместе через общий root-level harness.
+
+## 🐳 Docker
+
+Сборка Docker-образа:
+
+```bash
+docker build -t callplanner .
+```
+
+Запуск контейнера:
+
+```bash
+docker run --rm -e PORT=3000 -p 3000:3000 callplanner
+```
+
+После старта контейнера приложение должно быть доступно по адресу:
+
+```text
+http://localhost:3000
+```
 
 ---
 

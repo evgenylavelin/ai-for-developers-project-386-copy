@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { createApp } from "./app.js";
@@ -7,6 +11,22 @@ import { InMemoryScheduleRepository } from "./repositories/inMemoryScheduleRepos
 import { BookingService } from "./services/bookingService.js";
 
 describe("backend routes", () => {
+  it("serves the built frontend index when a dist directory is available", async () => {
+    const frontendDistDir = mkdtempSync(path.join(os.tmpdir(), "callplanner-frontend-"));
+
+    writeFileSync(path.join(frontendDistDir, "index.html"), "<!doctype html><html><body>Callplanner</body></html>");
+
+    const app = createApp({ frontendDistDir });
+
+    const response = await app.inject({ method: "GET", url: "/" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/html");
+    expect(response.body).toContain("Callplanner");
+
+    await app.close();
+    rmSync(frontendDistDir, { recursive: true, force: true });
+  });
 
   it("returns the default owner schedule", async () => {
     const app = createApp();
