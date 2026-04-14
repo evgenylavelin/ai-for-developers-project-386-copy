@@ -26,6 +26,21 @@ describe("deriveEntryState", () => {
   it("returns choose-event-type for multiple event types", () => {
     expect(deriveEntryState(multiEventTypes).kind).toBe("choose-event-type");
   });
+
+  it("returns prefilled-public-booking when a known public booking type is provided", () => {
+    const state = deriveEntryState(multiEventTypes, "standard");
+
+    expect(state.kind).toBe("prefilled-public-booking");
+    if (state.kind === "prefilled-public-booking") {
+      expect(state.presetEventType).toEqual(multiEventTypes[0]);
+    }
+  });
+
+  it("falls back to choose-event-type when the prefilled id is missing", () => {
+    expect(deriveEntryState(multiEventTypes, "missing").kind).toBe(
+      "choose-event-type",
+    );
+  });
 });
 
 describe("buildProgressSteps", () => {
@@ -42,6 +57,14 @@ describe("buildProgressSteps", () => {
 
   it("includes the event type step when multiple event types exist", () => {
     expect(buildProgressSteps(deriveEntryState(multiEventTypes).kind)).toEqual([
+      "Тип встречи",
+      "Дата и время",
+      "Контакты",
+    ]);
+  });
+
+  it("keeps the event type step for prefilled public bookings", () => {
+    expect(buildProgressSteps("prefilled-public-booking")).toEqual([
       "Тип встречи",
       "Дата и время",
       "Контакты",

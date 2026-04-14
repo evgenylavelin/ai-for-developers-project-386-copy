@@ -108,7 +108,8 @@ export type CalendarDaySummary = {
 export type EntryStateKind =
   | "unavailable"
   | "direct-booking"
-  | "choose-event-type";
+  | "choose-event-type"
+  | "prefilled-public-booking";
 
 export type UnavailableEntryState = {
   kind: "unavailable";
@@ -123,10 +124,16 @@ export type ChooseEventTypeEntryState = {
   kind: "choose-event-type";
 };
 
+export type PrefilledPublicBookingEntryState = {
+  kind: "prefilled-public-booking";
+  presetEventType: EventType;
+};
+
 export type EntryState =
   | UnavailableEntryState
   | DirectBookingEntryState
-  | ChooseEventTypeEntryState;
+  | ChooseEventTypeEntryState
+  | PrefilledPublicBookingEntryState;
 
 export type GuestFlowSummary = {
   eventTypeTitle?: string;

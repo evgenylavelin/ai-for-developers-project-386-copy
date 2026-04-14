@@ -5,7 +5,10 @@ import type {
   GuestFlowSummary,
 } from "../types";
 
-export function deriveEntryState(eventTypes: EventType[]): EntryState {
+export function deriveEntryState(
+  eventTypes: EventType[],
+  prefilledEventTypeId?: string,
+): EntryState {
   if (eventTypes.length === 0) {
     return { kind: "unavailable" };
   }
@@ -13,6 +16,13 @@ export function deriveEntryState(eventTypes: EventType[]): EntryState {
   if (eventTypes.length === 1) {
     return {
       kind: "direct-booking",
+      presetEventType: eventTypes[0],
+    };
+  }
+
+  if (eventTypes.some((eventType) => eventType.id === prefilledEventTypeId)) {
+    return {
+      kind: "prefilled-public-booking",
       presetEventType: eventTypes[0],
     };
   }
@@ -25,7 +35,7 @@ export function buildProgressSteps(kind: EntryStateKind): string[] {
     return ["Дата и время", "Контакты"];
   }
 
-  if (kind === "choose-event-type") {
+  if (kind === "choose-event-type" || kind === "prefilled-public-booking") {
     return ["Тип встречи", "Дата и время", "Контакты"];
   }
 
