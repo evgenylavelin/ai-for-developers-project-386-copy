@@ -20,10 +20,14 @@ export function deriveEntryState(
     };
   }
 
-  if (eventTypes.some((eventType) => eventType.id === prefilledEventTypeId)) {
+  const prefilledEventType = eventTypes.find(
+    (eventType) => eventType.id === prefilledEventTypeId,
+  );
+
+  if (prefilledEventType) {
     return {
       kind: "prefilled-public-booking",
-      presetEventType: eventTypes[0],
+      presetEventType: prefilledEventType,
     };
   }
 

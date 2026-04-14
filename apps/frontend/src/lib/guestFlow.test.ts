@@ -32,7 +32,7 @@ describe("deriveEntryState", () => {
 
     expect(state.kind).toBe("prefilled-public-booking");
     if (state.kind === "prefilled-public-booking") {
-      expect(state.presetEventType).toEqual(multiEventTypes[0]);
+      expect(state.presetEventType).toEqual(multiEventTypes[1]);
     }
   });
 
