@@ -295,6 +295,7 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.72rem;
+  font-weight: 400;
   color: rgba(24, 33, 23, 0.56);
 }
 
@@ -805,6 +806,12 @@ h1 {
   line-height: 1.1;
 }
 
+.owner-list-panel__header h2.bookings-card__eyebrow,
+.owner-form-panel__header h2.bookings-card__eyebrow {
+  font-size: 0.72rem;
+  line-height: normal;
+}
+
 .owner-event-type-list {
   display: grid;
   gap: 12px;
@@ -815,7 +822,9 @@ h1 {
 
 .owner-event-type-card {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 16px;
+  align-items: start;
   width: 100%;
   padding: 16px;
   border: 1px solid rgba(24, 33, 23, 0.08);
@@ -825,6 +834,12 @@ h1 {
   color: #182117;
   text-align: left;
   cursor: pointer;
+}
+
+.owner-event-type-card__copy {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
 }
 
 .owner-event-type-card--selected {
@@ -842,6 +857,11 @@ h1 {
 
 .owner-event-type-card__meta {
   color: rgba(24, 33, 23, 0.68);
+}
+
+.owner-event-type-card__status {
+  justify-self: end;
+  align-self: start;
 }
 
 .owner-status-row {

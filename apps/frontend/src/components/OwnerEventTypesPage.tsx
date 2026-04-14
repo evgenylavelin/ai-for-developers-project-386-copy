@@ -350,11 +350,13 @@ export function OwnerEventTypesPage({
                         disabled={submitting}
                         onClick={() => selectEventType(eventType)}
                       >
-                        <span className="owner-event-type-card__title">{eventType.title}</span>
-                        <span className="owner-event-type-card__meta">
-                          {formatDuration(eventType.durationMinutes)}
+                        <span className="owner-event-type-card__copy">
+                          <span className="owner-event-type-card__title">{eventType.title}</span>
+                          <span className="owner-event-type-card__meta">
+                            {formatDuration(eventType.durationMinutes)}
+                          </span>
                         </span>
-                        <span className="owner-status-row">
+                        <span className="owner-status-row owner-event-type-card__status">
                           {getStatusBadges(eventType).map((status) => (
                             <span
                               key={status}
@@ -382,18 +384,6 @@ export function OwnerEventTypesPage({
                   {isCreateMode ? "Новый тип события" : "Редактирование типа события"}
                 </h2>
               </div>
-              {selectedEventType ? (
-                <div className="owner-status-row owner-status-row--compact">
-                  {getStatusBadges(selectedEventType).map((status) => (
-                    <span
-                      key={status}
-                      className={`owner-status-pill${status === "Архив" ? " owner-status-pill--archived" : ""}`}
-                    >
-                      {status}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
             </div>
 
             {selectedEventType?.hasBookings ? (
