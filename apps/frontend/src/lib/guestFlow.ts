@@ -14,6 +14,17 @@ export function deriveEntryState(
     return { kind: "unavailable" };
   }
 
+  if (eventTypes.length === 1) {
+    return {
+      kind: "direct-booking",
+      presetEventType: eventTypes[0],
+    };
+  }
+
+  if (requireExplicitEventTypeSelection) {
+    return { kind: "choose-event-type" };
+  }
+
   const prefilledEventType = eventTypes.find(
     (eventType) => eventType.id === prefilledEventTypeId,
   );
@@ -22,17 +33,6 @@ export function deriveEntryState(
     return {
       kind: "prefilled-public-booking",
       presetEventType: prefilledEventType,
-    };
-  }
-
-  if (requireExplicitEventTypeSelection) {
-    return { kind: "choose-event-type" };
-  }
-
-  if (eventTypes.length === 1) {
-    return {
-      kind: "direct-booking",
-      presetEventType: eventTypes[0],
     };
   }
 

@@ -23,6 +23,15 @@ describe("deriveEntryState", () => {
     }
   });
 
+  it("keeps direct-booking for one event type even with a matching prefilled id", () => {
+    const state = deriveEntryState(singleEventType, "standard");
+
+    expect(state.kind).toBe("direct-booking");
+    if (state.kind === "direct-booking") {
+      expect(state.presetEventType).toEqual(singleEventType[0]);
+    }
+  });
+
   it("returns choose-event-type for multiple event types", () => {
     expect(deriveEntryState(multiEventTypes).kind).toBe("choose-event-type");
   });
@@ -126,7 +135,7 @@ describe("mock guest flow fixtures", () => {
     expect(datesByEventType.standard[4].slots).toEqual([]);
   });
 
-  it("forces the event type step when explicit selection is required", () => {
-    expect(deriveEntryState(singleEventType, undefined, true).kind).toBe("choose-event-type");
+  it("keeps direct-booking for a single event type even when explicit selection is requested", () => {
+    expect(deriveEntryState(singleEventType, undefined, true).kind).toBe("direct-booking");
   });
 });

@@ -200,7 +200,7 @@ export function GuestBookingPage({
     currentScreen === "event-type"
       ? []
       : currentScreen === "date-time"
-        ? isThreeStepFlow && selectedEventType?.title
+        ? selectedEventType?.title
           ? [selectedEventType.title]
           : []
         : buildStepSummaryParts({

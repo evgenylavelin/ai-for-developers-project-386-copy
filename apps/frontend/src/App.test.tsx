@@ -924,9 +924,8 @@ describe("App", () => {
 
     expect(await screen.findByRole("heading", { name: "Бронирования" })).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "Среда, 15 апреля" }));
     await user.click(screen.getByRole("button", { name: "Записаться" }));
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: bookingDay.shortLabel }));
     await user.click(screen.getByRole("button", { name: "10:30" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -1010,8 +1009,6 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "Бронирования" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Записаться" }));
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
 
     expect(
       await screen.findByRole("heading", { name: "Выберите дату и время" }),
@@ -1111,6 +1108,15 @@ describe("App", () => {
     expect(progressItems[1]).toHaveClass("progress-step--active");
   });
 
+  it("shows the selected event type on the date step for direct booking", () => {
+    render(<App scenario="single" />);
+
+    expect(screen.getByRole("heading", { name: "Выберите дату и время" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Стратегическая сессия",
+    );
+  });
+
   it("shows compact weekdays in the booking flow and a full date above slots", () => {
     render(<App scenario="single" />);
 
@@ -1127,7 +1133,9 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "09:00" }));
 
-    expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Стратегическая сессия",
+    );
   });
 
   it("shows empty-state copy when the selected date has no available slots", async () => {
@@ -1202,7 +1210,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "09:00" }));
     await user.click(screen.getByRole("button", { name: "Вс 19" }));
 
-    expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Стратегическая сессия",
+    );
     expect(
       screen.getByText("На выбранный день свободных слотов нет. Выберите другую дату."),
     ).toBeInTheDocument();
@@ -1250,7 +1260,9 @@ describe("App", () => {
     rerender(<GuestBookingPage eventTypes={singleEventType} datesByEventType={nextDates} />);
 
     expect(screen.getByText("Суббота, 18 апреля")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Результат предыдущих шагов")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Стратегическая сессия",
+    );
     expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
   });
 
@@ -1270,7 +1282,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Короткий созвон" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
-    expect(screen.getByText("Короткий созвон")).toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Короткий созвон",
+    );
     expect(
       within(screen.getByLabelText("Результат предыдущих шагов")).queryByText(
         "Среда, 15 апреля • 09:00",
@@ -1317,6 +1331,77 @@ describe("App", () => {
     expect(screen.getByText("Пятница, 17 апреля")).toBeInTheDocument();
   });
 
+  it("opens a two-step booking flow from the public home when only one event type is available", async () => {
+    const bookingDay = buildPublicCalendarDays()[0];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.endsWith("/owner/event-types")) {
+        return Promise.resolve(createJsonResponse([]));
+      }
+
+      if (url.endsWith("/event-types")) {
+        return Promise.resolve(createJsonResponse(singleEventType));
+      }
+
+      if (url.endsWith("/bookings")) {
+        return Promise.resolve(
+          createJsonResponse([
+            {
+              id: "booking-1",
+              eventTypeId: "standard",
+              startAt: `${bookingDay.isoDate}T09:00:00Z`,
+              endAt: `${bookingDay.isoDate}T09:30:00Z`,
+              guestName: "Иван Петров",
+              guestEmail: "ivan@example.com",
+              status: "active",
+            },
+          ]),
+        );
+      }
+
+      if (url.endsWith("/schedule")) {
+        return Promise.resolve(createJsonResponse(defaultOwnerSchedule));
+      }
+
+      if (/\/event-types\/[^/]+\/availability$/.test(url)) {
+        return Promise.resolve(
+          createJsonResponse([
+            {
+              startAt: `${bookingDay.isoDate}T10:00:00Z`,
+              endAt: `${bookingDay.isoDate}T10:30:00Z`,
+            },
+          ]),
+        );
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    const user = userEvent.setup();
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Бронирования" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Записаться" }));
+
+    expect(screen.getByRole("heading", { name: "Выберите дату и время" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Стратегическая сессия",
+    );
+
+    const progressItems = within(
+      screen.getByRole("list", { name: "Прогресс бронирования" }),
+    ).getAllByRole("listitem");
+
+    expect(progressItems).toHaveLength(2);
+    expect(progressItems[0]).toHaveClass("progress-step--active");
+    expect(progressItems[1]).toHaveClass("progress-step--upcoming");
+    expect(screen.queryByRole("heading", { name: "Выберите тип встречи" })).not.toBeInTheDocument();
+  });
+
   it("starts from event type selection when the public filter is not selected", async () => {
     const user = userEvent.setup();
 
@@ -1341,7 +1426,9 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "Выберите дату и время" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
-    expect(screen.getByText("Короткий созвон")).toBeInTheDocument();
+    expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
+      "Короткий созвон",
+    );
     expect(screen.getByText("Пятница, 17 апреля")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Выберите тип встречи" })).not.toBeInTheDocument();
   });
