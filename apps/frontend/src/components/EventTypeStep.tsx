@@ -6,6 +6,10 @@ type EventTypeStepProps = {
   onSelect: (eventTypeId: string) => void;
 };
 
+function formatDuration(durationMinutes: number): string {
+  return `${durationMinutes} мин`;
+}
+
 export function EventTypeStep({
   eventTypes,
   selectedEventTypeId,
@@ -20,12 +24,15 @@ export function EventTypeStep({
           <button
             key={eventType.id}
             type="button"
-            aria-label={eventType.title}
+            aria-label={`${eventType.title}, ${formatDuration(eventType.durationMinutes)}`}
             className={`choice-card${selected ? " choice-card--selected" : ""}`}
             onClick={() => onSelect(eventType.id)}
           >
-            <span>{eventType.title}</span>
-            <span>{eventType.durationMinutes} минут</span>
+            <span className="choice-card__title">{eventType.title}</span>
+            <span className="choice-card__duration" aria-hidden="true">
+              <span className="choice-card__duration-unit">мин</span>
+              <span className="choice-card__duration-value">{eventType.durationMinutes}</span>
+            </span>
           </button>
         );
       })}

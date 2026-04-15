@@ -1415,6 +1415,18 @@ describe("App", () => {
     expect(screen.queryByRole("heading", { name: "Выберите дату и время" })).not.toBeInTheDocument();
   });
 
+  it("renders wizard event type duration with separate unit and value", () => {
+    render(<GuestBookingPage eventTypes={multiEventTypes} datesByEventType={bookingSchedule} />);
+
+    const strategyCard = screen.getByRole("button", {
+      name: "Стратегическая сессия, 30 мин",
+    });
+
+    expect(within(strategyCard).getByText("мин")).toBeInTheDocument();
+    expect(within(strategyCard).getByText("30")).toBeInTheDocument();
+    expect(within(strategyCard).queryByText("30 минут")).not.toBeInTheDocument();
+  });
+
   it("opens the booking flow on date and time when a public event type filter is already selected", async () => {
     const user = userEvent.setup();
 
