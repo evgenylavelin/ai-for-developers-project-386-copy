@@ -1039,7 +1039,7 @@ describe("App", () => {
 
     expect(nextButton).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
+    await user.click(screen.getByRole("button", { name: /Стратегическая сессия/i }));
 
     expect(nextButton).toBeEnabled();
   });
@@ -1052,15 +1052,18 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the selected event type above the date and time step", async () => {
+  it("shows the selected event type duration above the date and time step", async () => {
     const user = userEvent.setup();
 
     render(<App scenario="multi" />);
 
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
+    await user.click(screen.getByRole("button", { name: /Стратегическая сессия/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
-    expect(screen.getByText("Стратегическая сессия")).toBeInTheDocument();
+    const summary = screen.getByLabelText("Результат предыдущих шагов");
+
+    expect(within(summary).getByText("30 мин")).toBeInTheDocument();
+    expect(within(summary).getByText("Стратегическая сессия")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Выберите дату и время" }),
     ).toBeInTheDocument();
@@ -1272,14 +1275,14 @@ describe("App", () => {
 
     render(<GuestBookingPage eventTypes={multiEventTypes} datesByEventType={datesByEventType} />);
 
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
+    await user.click(screen.getByRole("button", { name: /Стратегическая сессия/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "09:00" }));
 
     expect(within(screen.getByLabelText("Результат предыдущих шагов")).getByText("Стратегическая сессия")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Назад" }));
-    await user.click(screen.getByRole("button", { name: "Короткий созвон" }));
+    await user.click(screen.getByRole("button", { name: /Короткий созвон/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
     expect(screen.getByLabelText("Результат предыдущих шагов")).toHaveTextContent(
@@ -1325,7 +1328,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Пятница, 17 апреля" }));
     await user.click(screen.getByRole("button", { name: "Записаться" }));
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
+    await user.click(screen.getByRole("button", { name: /Стратегическая сессия/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
     expect(screen.getByText("Пятница, 17 апреля")).toBeInTheDocument();
@@ -1415,15 +1418,15 @@ describe("App", () => {
     expect(screen.queryByRole("heading", { name: "Выберите дату и время" })).not.toBeInTheDocument();
   });
 
-  it("renders wizard event type duration with separate unit and value", () => {
+  it("renders wizard event type duration above the title like the public filter chip", () => {
     render(<GuestBookingPage eventTypes={multiEventTypes} datesByEventType={bookingSchedule} />);
 
     const strategyCard = screen.getByRole("button", {
       name: "Стратегическая сессия, 30 мин",
     });
 
-    expect(within(strategyCard).getByText("мин")).toBeInTheDocument();
-    expect(within(strategyCard).getByText("30")).toBeInTheDocument();
+    expect(within(strategyCard).getByText("30 мин")).toBeInTheDocument();
+    expect(within(strategyCard).getByText("Стратегическая сессия")).toBeInTheDocument();
     expect(within(strategyCard).queryByText("30 минут")).not.toBeInTheDocument();
   });
 
@@ -1457,7 +1460,7 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "Выберите тип встречи" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Выйти из записи" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Короткий созвон" })).toHaveClass(
+    expect(screen.getByRole("button", { name: /Короткий созвон/i })).toHaveClass(
       "choice-card--selected",
     );
 
@@ -1498,7 +1501,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Записаться" }));
     await user.click(screen.getByRole("button", { name: "09:00" }));
     await user.click(screen.getByRole("button", { name: "Назад" }));
-    await user.click(screen.getByRole("button", { name: "Короткий созвон" }));
+    await user.click(screen.getByRole("button", { name: /Короткий созвон/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
     expect(screen.getByText("Короткий созвон")).toBeInTheDocument();
@@ -1583,7 +1586,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Пятница, 17 апреля" }));
     await user.click(screen.getByRole("button", { name: "Записаться" }));
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
+    await user.click(screen.getByRole("button", { name: /Стратегическая сессия/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "09:00" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -1602,7 +1605,7 @@ describe("App", () => {
 
     render(<App scenario="multi" />);
 
-    await user.click(screen.getByRole("button", { name: "Стратегическая сессия" }));
+    await user.click(screen.getByRole("button", { name: /Стратегическая сессия/i }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "09:00" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -1613,7 +1616,7 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { name: "Выберите тип встречи" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Стратегическая сессия" })).not.toHaveClass(
+    expect(screen.getByRole("button", { name: /Стратегическая сессия/i })).not.toHaveClass(
       "choice-card--selected",
     );
   });

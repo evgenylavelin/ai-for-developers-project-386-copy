@@ -28,10 +28,9 @@ export function EventTypeStep({
             className={`choice-card${selected ? " choice-card--selected" : ""}`}
             onClick={() => onSelect(eventType.id)}
           >
-            <span className="choice-card__title">{eventType.title}</span>
-            <span className="choice-card__duration" aria-hidden="true">
-              <span className="choice-card__duration-unit">мин</span>
-              <span className="choice-card__duration-value">{eventType.durationMinutes}</span>
+            <span className="event-type-label">
+              <span className="event-type-label__meta">{formatDuration(eventType.durationMinutes)}</span>
+              <span className="event-type-label__title">{eventType.title}</span>
             </span>
           </button>
         );

@@ -654,6 +654,11 @@ h1 {
   font-size: 14px;
 }
 
+.selection-summary__chip--event-type {
+  padding-top: 12px;
+  padding-bottom: 10px;
+}
+
 .selection-summary--success {
   margin-top: 20px;
   padding: 14px 16px;
@@ -712,41 +717,27 @@ h1 {
   cursor: pointer;
 }
 
-.choice-card {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-}
-
-.choice-card__title {
-  min-width: 0;
-  font-weight: 600;
-}
-
-.choice-card__duration {
+.event-type-label {
   position: relative;
-  flex-shrink: 0;
-  display: inline-block;
-  min-width: 2.4rem;
-  padding-top: 0.8rem;
-  text-align: left;
+  display: block;
+  min-width: 0;
+  padding-top: 12px;
 }
 
-.choice-card__duration-unit {
+.event-type-label__meta {
   position: absolute;
   top: 0;
-  right: 0;
+  left: 0;
   font-size: 0.68rem;
   line-height: 1;
   white-space: nowrap;
   color: var(--color-text-secondary);
 }
 
-.choice-card__duration-value {
+.event-type-label__title {
   display: block;
-  font-size: 1.1rem;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .choice-card--selected,

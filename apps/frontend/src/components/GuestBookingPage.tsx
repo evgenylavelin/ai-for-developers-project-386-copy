@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import {
   buildProgressSteps,
-  buildStepSummaryParts,
   deriveEntryState,
   formatSummary,
 } from "../lib/guestFlow";
@@ -71,6 +70,10 @@ function writeStoredGuestContacts(contacts: StoredGuestContacts) {
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function formatDuration(durationMinutes: number): string {
+  return `${durationMinutes} мин`;
 }
 
 type GuestBookingPageProps = {
@@ -196,18 +199,32 @@ export function GuestBookingPage({
     fullDateLabel: activeDate?.fullLabel,
     timeLabel: selectedTime || undefined,
   });
+  const dateTimeSummaryPart = [activeDate?.fullLabel, selectedTime || undefined].filter(Boolean).join(" • ");
   const summaryParts =
     currentScreen === "event-type"
       ? []
       : currentScreen === "date-time"
-        ? selectedEventType?.title
-          ? [selectedEventType.title]
+        ? selectedEventType
+          ? [
+              {
+                kind: "event-type" as const,
+                title: selectedEventType.title,
+                durationLabel: formatDuration(selectedEventType.durationMinutes),
+              },
+            ]
           : []
-        : buildStepSummaryParts({
-            eventTypeTitle: selectedEventType?.title,
-            fullDateLabel: activeDate?.fullLabel,
-            timeLabel: selectedTime || undefined,
-          });
+        : [
+            ...(selectedEventType
+              ? [
+                  {
+                    kind: "event-type" as const,
+                    title: selectedEventType.title,
+                    durationLabel: formatDuration(selectedEventType.durationMinutes),
+                  },
+                ]
+              : []),
+            ...(dateTimeSummaryPart ? [{ kind: "text" as const, value: dateTimeSummaryPart }] : []),
+          ];
   const restartBookingFlow = () => {
     const persistedContacts = readStoredGuestContacts();
 
